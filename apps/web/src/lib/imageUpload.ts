@@ -1,5 +1,5 @@
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 // Uploads to the server's persistent file store (/api/v1/uploads) and
 // returns the permanent URL it's saved at. Previously this read the file as
@@ -11,7 +11,7 @@ export async function readImageFile(file: File): Promise<string> {
     throw new Error("Choose a PNG, JPG, or WebP image.");
   }
   if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error("This image is too large. Choose one smaller than 5MB.");
+    throw new Error("This image is too large. Choose one smaller than 20MB.");
   }
 
   const body = new FormData();
