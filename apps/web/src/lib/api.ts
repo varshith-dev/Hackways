@@ -64,9 +64,9 @@ if (typeof window !== "undefined") {
       .catch(() => {});
 
     fetch("/api/v1/attendees")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data.attendees && Array.isArray(data.attendees)) {
+        if (data && data.attendees && Array.isArray(data.attendees)) {
           const serverAttendees: StoredAttendee[] = data.attendees;
           localStorage.setItem(ATTENDEES_STORAGE_KEY, JSON.stringify(serverAttendees));
           window.dispatchEvent(new CustomEvent("hackways_attendees_updated", { detail: serverAttendees }));
@@ -75,9 +75,9 @@ if (typeof window !== "undefined") {
       .catch(() => {});
 
     fetch("/api/v1/orders")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data.orders && Array.isArray(data.orders)) {
+        if (data && data.orders && Array.isArray(data.orders)) {
           const serverOrders: StoredOrder[] = data.orders;
           localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(serverOrders));
           window.dispatchEvent(new CustomEvent("hackways_orders_updated", { detail: serverOrders }));

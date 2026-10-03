@@ -74,8 +74,13 @@ export function defaultPlatformSettings(): PlatformSettings {
   };
 }
 
-export function canAccessModule(settings: PlatformSettings, moduleId: string, role: SessionRole): boolean {
+export function canAccessModule(settings: PlatformSettings | null | undefined, moduleId: string, role: SessionRole): boolean {
   if (moduleId === "users" || moduleId === "super-admin") return role === "admin";
+  if (!settings || !settings.moduleAccess) {
+    const defaults = defaultPlatformSettings();
+    const fallback = defaults.moduleAccess[moduleId as ConsoleModuleId];
+    return fallback ? fallback.includes(role) : false;
+  }
   const allowed = settings.moduleAccess[moduleId as ConsoleModuleId];
   return allowed ? allowed.includes(role) : false;
 }

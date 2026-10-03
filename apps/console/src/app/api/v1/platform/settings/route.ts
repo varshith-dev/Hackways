@@ -6,24 +6,19 @@ import { isSuperAdminEmail, validateSettingsPatch } from "@/lib/platformSettings
 export async function GET(req: Request) {
   const session = requireSession(req);
   const settings = serverStore.getSettings();
-  if (session instanceof NextResponse) {
+  const isSuperAdmin = !(session instanceof NextResponse) && session.role === "admin" && isSuperAdminEmail(session.email);
+  if (session instanceof NextResponse || !isSuperAdmin) {
     return NextResponse.json({
       settings: {
-        platformFeePercent: typeof settings?.platformFeePercent === "number" ? settings.platformFeePercent : 4,
-        paymentGateways: {
-          razorpay: {
-            keyId: settings?.paymentGateways?.razorpay?.keyId || "",
-            enabled: Boolean(settings?.paymentGateways?.razorpay?.enabled),
-          },
+        moduleAccess: settings?.moduleAccess || {
+          organizer: ["organizer", "admin"],
+          marketing: ["organizer", "admin"],
+          kpi: ["admin"],
+          checkin: ["organizer", "admin"],
+          finance: ["organizer", "admin"],
+          team: ["organizer", "admin"],
+          channels: ["organizer", "admin"],
         },
-      },
-      canManage: false,
-    });
-  }
-  const isSuperAdmin = session.role === "admin" && isSuperAdminEmail(session.email);
-  if (!isSuperAdmin) {
-    return NextResponse.json({
-      settings: {
         platformFeePercent: typeof settings?.platformFeePercent === "number" ? settings.platformFeePercent : 4,
         paymentGateways: {
           razorpay: {

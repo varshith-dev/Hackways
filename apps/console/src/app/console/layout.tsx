@@ -165,10 +165,11 @@ export default function ConsoleLayout({
     );
   }
 
-  // Standalone KPI & User Management Suites: dedicated uncompressed full-bleed dashboards
+  // Standalone KPI & User Management Suites or Start onboarding: dedicated uncompressed layouts
   if (
     pathname.startsWith("/console/kpi") ||
-    pathname.startsWith("/console/users")
+    pathname.startsWith("/console/users") ||
+    pathname.startsWith("/console/start")
   ) {
     return <ToastProvider>{children}</ToastProvider>;
   }
