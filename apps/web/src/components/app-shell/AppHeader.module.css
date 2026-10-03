@@ -1,0 +1,13 @@
+.ambient {
+  position: absolute;
+  inset: 0 0 -16px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(250 250 250 / 65%), rgb(250 250 250 / 25%) 65%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+
+.ambient[data-theme="dark"] {
+  background: linear-gradient(to bottom, rgb(16 18 20 / 65%), rgb(16 18 20 / 25%) 65%, transparent);
+}

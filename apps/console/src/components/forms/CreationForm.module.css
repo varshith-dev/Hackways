@@ -1,0 +1,63 @@
+.page {
+  --canvas: var(--color-neutral-50);
+  --ink: var(--color-neutral-950);
+  --muted: var(--color-neutral-500);
+  --line: var(--color-neutral-300);
+  --soft: var(--color-neutral-100);
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+}
+.main { max-width: 600px; margin: 0 auto; padding: 42px 24px 64px; }
+.back { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; font-size: 13px; color: var(--muted); margin-bottom: 26px; }
+.back:hover { color: var(--ink); }
+.heading { margin-bottom: 32px; }
+.heading h1 { font-size: 28px; font-weight: 600; line-height: 1.25; letter-spacing: -.03em; }
+.heading p { margin-top: 10px; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.form { width: 100%; }
+.fields { min-width: 0; border: 0; margin: 0; padding: 0; }
+.logoRow { display: flex; align-items: center; gap: 18px; margin-bottom: 32px; }
+.logo { width: 76px; height: 76px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); display: grid; place-items: center; flex-shrink: 0; overflow: hidden; background: var(--soft); cursor: pointer; }
+.logo:hover { border-color: var(--ink); color: var(--ink); }
+.logo img { width: 100%; height: 100%; object-fit: cover; }
+.logoDetails { min-width: 0; }
+.uploadLink { display: inline-flex; align-items: center; gap: 9px; min-height: 32px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.uploadLink:hover { text-decoration: underline; text-underline-offset: 4px; }
+.uploadLink span, .field label span { color: var(--muted); font-size: 12px; font-weight: 400; }
+.logoDetails p { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.remove { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); min-height: 28px; cursor: pointer; }
+.remove:hover { color: var(--ink); }
+.field { margin-bottom: 26px; }
+.field label { display: flex; align-items: baseline; gap: 10px; font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+.field input, .field textarea, .field select { display: block; width: 100%; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 10px 0 12px; font-size: 15px; line-height: 1.6; background: transparent; color: var(--ink); caret-color: var(--ink); }
+.field textarea { resize: vertical; min-height: 108px; max-height: 300px; }
+.field input::placeholder, .field textarea::placeholder { color: var(--muted); opacity: 1; }
+.page .field :is(input, textarea, select):focus { outline: none; box-shadow: none !important; border-bottom-color: var(--accent) !important; }
+.field:focus-within label { color: var(--ink); }
+.actions { display: flex; align-items: center; justify-content: flex-end; gap: 22px; padding-top: 6px; }
+.cancel { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; color: var(--muted); }
+.cancel:hover { color: var(--ink); }
+.submit { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 0 20px; border: 1px solid var(--accent); border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--accent); color: var(--accent-foreground); cursor: pointer; }
+.submit svg { stroke-width: 1.5; }
+.submit:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.submit:active:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong); }
+.submit:disabled { background: var(--color-neutral-200); color: var(--color-neutral-400); border-color: var(--color-neutral-200); cursor: not-allowed; }
+.error { color: var(--color-error); font-size: 13px; line-height: 1.6; margin: -10px 0 22px; }
+.signIn { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+.signIn a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.page :is(button, a):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.page button:disabled { cursor: not-allowed; }
+.page ::selection { background: var(--ink); color: var(--canvas); }
+.spinner { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+@media (max-width: 600px) {
+  .main { padding-top: 20px; padding-bottom: 40px; }
+  .back { margin-bottom: 20px; }
+  .heading h1 { font-size: 26px; }
+  .heading { margin-bottom: 28px; }
+  .field input, .field textarea, .field select { font-size: 16px; }
+  .uploadLink, .remove { min-height: 36px; }
+  .actions { gap: 20px; }
+}

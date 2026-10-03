@@ -1,0 +1,502 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-sans), "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: var(--font-sans), "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-mono), monospace;
+
+  /* ---------------------------------------------------------------------
+     Hackways palette — a cool grey ramp carrying one brand pop.
+       Whiteout   #FBFBFB   the page
+       Floatie    #EAE8EC   raised surfaces, chips
+       Indigo     #34349C   the accent. ~9.9:1 on Whiteout, so unlike the
+                             cyan it replaced it clears for text too, not
+                             fill-only.
+       DirtySnow  #CBCDD5   hairlines, dividers
+       Week       #8D8D8F   UI grey: icons, borders, disabled. NOT text
+       Caviar     #2C2C2E   type, and the one dark surface
+
+     Week is 3.20:1 on Whiteout, under the 4.5 needed for body copy. The two
+     text steps below are derived to sit on the same axis and clear it.
+     --------------------------------------------------------------------- */
+  --color-cyan: #34349C;
+  --color-cyan-deep: #2C2C85; /* hover */
+  --color-cyan-strong: #23236B; /* active/pressed */
+  --color-cyan-soft: #E3E2F7; /* pale tint for chips */
+  /* The accent itself clears 4.5:1 on Whiteout, so it doubles as its own
+     text-safe step — no separate darker "ink" variant needed the way the
+     old cyan required one. */
+  --color-cyan-ink: #34349C;
+
+  --color-caviar: #2C2C2E;
+  --color-week: #8D8D8F;
+  --color-snow: #CBCDD5;
+  --color-floatie: #EAE8EC;
+  --color-whiteout: #FBFBFB;
+
+  /* The same six as a ramp, so every existing neutral-* utility lands on brand.
+     600 and 700 are the derived text steps: 5.45:1 and 7.07:1 on Whiteout. */
+  --color-neutral-50: #FBFBFB;  /* Whiteout */
+  --color-neutral-100: #F2F1F3;
+  --color-neutral-200: #EAE8EC; /* Floatie */
+  --color-neutral-300: #CBCDD5; /* Dirty Snow */
+  --color-neutral-400: #A8A8AB;
+  --color-neutral-500: #8D8D8F; /* More Than A Week */
+  --color-neutral-600: #67676A; /* derived — muted text */
+  --color-neutral-700: #565659; /* derived — body text */
+  --color-neutral-800: #434346;
+  --color-neutral-900: #363638;
+  --color-neutral-950: #2C2C2E; /* Caviar */
+  --color-white: #FFFFFF;
+
+  /* Hairlines: Dirty Snow is the visible rule, the lighter step the whisper. */
+  --color-line: #E4E2E6;
+  --color-line-strong: #CBCDD5;
+
+  --color-success: #16A34A;
+  --color-success-bg: #DCFCE7;
+  --color-warning: #B45309;
+  --color-warning-bg: #FEF3C7;
+  --color-error: #DC2626;
+  --color-error-bg: #FEE2E2;
+  --color-info: #3F3F46;
+  --color-info-bg: #EAE8EC;
+}
+
+:root {
+  color-scheme: light;
+
+  --background: var(--color-whiteout);
+  --surface: var(--color-white);
+  --foreground: var(--color-caviar);
+  --foreground-muted: var(--color-neutral-600);
+  --border: var(--color-line-strong);
+  --border-subtle: var(--color-line);
+  --primary: var(--color-caviar);
+  --primary-foreground: var(--color-whiteout);
+
+  /* Indigo is dark, so its foreground is white — the reverse of the cyan
+     accent this replaced, which was light and needed Caviar on it. */
+  --accent: var(--color-cyan);
+  --accent-hover: var(--color-cyan-deep);
+  --accent-strong: var(--color-cyan-strong);
+  --accent-subtle: var(--color-cyan-soft);
+  --accent-foreground: var(--color-white);
+}
+
+body {
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.font-body {
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Tabular numbers for accurate real-time capacity and clock counters */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons (used across the console and forms, not just the landing page)
+   --------------------------------------------------------------------------- */
+
+.btn-primary {
+  font-family: var(--font-heading), var(--font-body), sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+  background: var(--color-caviar);
+  color: var(--color-whiteout);
+  border: 1px solid var(--color-caviar);
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background: #1F1F21;
+  border-color: #1F1F21;
+}
+.btn-primary:active {
+  transform: scale(0.985);
+}
+
+.btn-secondary {
+  font-family: var(--font-heading), var(--font-body), sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+  background: var(--color-white);
+  color: var(--color-caviar);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background: var(--color-floatie);
+  border-color: var(--color-week);
+}
+.btn-secondary:active {
+  transform: scale(0.985);
+}
+
+/* Thin sleek scrollbar */
+.kaggle-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.kaggle-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.kaggle-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-snow);
+  border-radius: 9999px;
+}
+.kaggle-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-week);
+}
+
+/* ---------------------------------------------------------------------------
+   Surfaces
+   This palette is flat and precise — depth comes from hairlines and type
+   hierarchy, not from gradients or drop shadows.
+   --------------------------------------------------------------------------- */
+
+/* Indigo clears 9.9:1 on Whiteout, so unlike the old cyan it has a strong
+   edge of its own — no forced hairline ring needed just to stay visible. */
+
+/* Decoration — a highlight mark, a panel, a badge. Nothing to identify. */
+.accent-fill {
+  background: var(--color-cyan);
+  color: var(--color-white);
+}
+
+/* Controls — the fill alone reads as a button now. */
+.accent-control {
+  background: var(--color-cyan);
+  color: var(--color-white);
+  transition: background-color 0.25s ease;
+}
+.accent-control:hover {
+  background: var(--color-cyan-deep);
+}
+.accent-control:active {
+  background: var(--color-cyan-strong);
+}
+
+/* ---------------------------------------------------------------------------
+   Indigo band — the one dark region in the page, carrying two sections as a
+   single continuous field so there is no seam between them.
+
+   Deepened a second pass ("remaining all are in a bit of deep shade of
+   color"), since the burst below is the one bright moment and everything else
+   should read as shade by comparison. Even the lightest stop (#332C96) carries
+   white at 10.82:1 and white/85 at 8.23:1 — darkening only ever helps contrast,
+   so this pass was free to go as deep as the brand hue allows. Cyan as text is
+   still well under 4.5 here, so it stays a fill, exactly as it does on
+   Whiteout.
+   --------------------------------------------------------------------------- */
+/* Flat and sharp, matching how the rest of the page is built: hairlines and a
+   clean colour change, not a soft blurred transition. A run of blur()/glow
+   experiments here (fading to "transparent", blurred radial blooms) kept
+   producing muddy, cheap-looking results that couldn't be reliably previewed
+   without a browser — removed rather than iterated on further. The band meets
+   the white page on a sharp edge, the same way every other section boundary
+   on this page does. */
+.band-indigo {
+  background: var(--color-whiteout);
+}
+
+.surface {
+  background: var(--color-white);
+  border: 1px solid var(--color-line);
+  border-radius: 18px;
+}
+
+.rule {
+  height: 1px;
+  background: var(--color-line);
+  border: 0;
+}
+
+/* Grain, barely there — just enough to stop large flat greys from banding. */
+.hw-grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.1;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion
+   Physical, not decorative: one spring curve, driven by scroll position or
+   hover rather than timers. All native CSS, so pages using it stay static
+   server components with no JS.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+/* Elements settle as they enter the viewport. Scroll-linked, so it tracks the
+   scrollbar instead of firing on a timer. Optional --i (set inline per item
+   in a .map()) offsets the range so a row of cards cascades in one after
+   another instead of arriving together; elements without --i default to 0
+   and animate exactly as before. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry calc(5% + var(--i, 0) * 4%) cover calc(30% + var(--i, 0) * 4%);
+    }
+  }
+}
+
+/* Browsers without view() support get the same hidden-until-scrolled-into-view
+   effect from SmoothScroll's IntersectionObserver instead, toggling .is-visible;
+   --i delays each item's transition the same way it offsets the native range. */
+@supports not (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s var(--ease-spring) calc(var(--i, 0) * 0.08s),
+        transform 0.6s var(--ease-spring) calc(var(--i, 0) * 0.08s);
+    }
+    .rise.is-visible {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Weight under the cursor. On a flat palette the lift is carried by the border
+   darkening to Week, not by a coloured glow. */
+.lift {
+  transition:
+    transform 0.4s var(--ease-spring),
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-week);
+}
+.lift:active {
+  transform: translateY(0);
+  transition-duration: 0.12s;
+}
+
+/* ---------------------------------------------------------------------------
+   TextAnimate — staggered per-segment text reveals.
+
+   Same idea as the Magic UI component, done in CSS so the text ships in the HTML
+   already visible and the animation is pure presentation. The library version
+   starts every segment at opacity 0 and only reveals it after hydration, which
+   on a hero headline means the LCP element is invisible until JS lands.
+
+   Each segment carries --i (its index); the delay is derived from it.
+   --------------------------------------------------------------------------- */
+
+.ta-seg {
+  display: inline-block;
+  white-space: pre;
+}
+.ta-line > .ta-seg {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ta-seg {
+    animation-duration: var(--ta-duration, 0.5s);
+    animation-delay: calc(var(--ta-delay, 0s) + var(--i) * var(--ta-stagger, 42ms));
+    animation-fill-mode: both;
+    animation-timing-function: var(--ease-spring);
+  }
+
+  .ta-fadeIn > .ta-seg { animation-name: ta-fade-in; }
+  .ta-blurIn > .ta-seg { animation-name: ta-blur-in; }
+  .ta-blurInUp > .ta-seg { animation-name: ta-blur-in-up; }
+  .ta-blurInDown > .ta-seg { animation-name: ta-blur-in-down; }
+  .ta-slideUp > .ta-seg { animation-name: ta-slide-up; }
+  .ta-slideDown > .ta-seg { animation-name: ta-slide-down; }
+  .ta-slideLeft > .ta-seg { animation-name: ta-slide-left; }
+  .ta-slideRight > .ta-seg { animation-name: ta-slide-right; }
+  .ta-scaleUp > .ta-seg { animation-name: ta-scale-up; }
+  .ta-scaleDown > .ta-seg { animation-name: ta-scale-down; }
+
+  /* startOnView: scroll position drives it instead of a timer. The stagger comes
+     from walking each segment's range start forward, since a delay in timeline
+     units would not read as a stagger. */
+  @supports (animation-timeline: view()) {
+    .ta-onview > .ta-seg {
+      animation-timeline: view();
+      animation-delay: 0s;
+      animation-range: entry calc(8% + var(--i) * 1.1%) cover 36%;
+    }
+  }
+}
+
+@keyframes ta-fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ta-blur-in {
+  from { opacity: 0; filter: blur(10px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes ta-blur-in-up {
+  from { opacity: 0; filter: blur(10px); transform: translateY(20px); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+@keyframes ta-blur-in-down {
+  from { opacity: 0; filter: blur(10px); transform: translateY(-20px); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+@keyframes ta-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ta-slide-down {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ta-slide-left {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ta-slide-right {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ta-scale-up {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ta-scale-down {
+  from { opacity: 0; transform: scale(1.5); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   TextReveal — words light up one by one as a tall sticky section scrolls past.
+
+   The tall track publishes a named view timeline; each word claims its own slice
+   of that timeline by index, which is the CSS equivalent of mapping scroll
+   progress onto a [start, end] range per word.
+
+   Words are fully legible by default and only dim inside the support + motion
+   query, so a browser without scroll timelines shows readable text rather than
+   a paragraph stuck at 22% opacity.
+   --------------------------------------------------------------------------- */
+
+.tr-track {
+  position: relative;
+  z-index: 0;
+}
+.tr-sticky {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  min-height: 100svh;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .tr-track {
+      view-timeline-name: --tr-track;
+      view-timeline-axis: block;
+    }
+    .tr-word {
+      opacity: 0.22;
+      animation: tr-reveal linear both;
+      animation-timeline: --tr-track;
+      /* Each word owns one slice of the middle of the cover range. */
+      animation-range: cover calc(18% + (var(--i) / var(--n)) * 54%) cover
+        calc(18% + ((var(--i) + 1) / var(--n)) * 54%);
+    }
+  }
+}
+
+@keyframes tr-reveal {
+  to { opacity: 1; }
+}
+
+/* Native disclosure animation — height interpolation, no JS, no wrapper div. */
+@supports (interpolate-size: allow-keywords) {
+  @media (prefers-reduced-motion: no-preference) {
+    :root { interpolate-size: allow-keywords; }
+
+    details::details-content {
+      block-size: 0;
+      overflow: clip;
+      opacity: 0;
+      transition:
+        block-size 0.35s var(--ease-spring),
+        opacity 0.3s ease,
+        content-visibility 0.35s allow-discrete;
+    }
+    details[open]::details-content {
+      block-size: auto;
+      opacity: 1;
+    }
+  }
+}
+
+/* Focus rings stay instant and obvious — motion must never delay them.
+   Caviar, not Cyan: the accent is too light to read as a ring on Whiteout. */
+:where(a, button, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-caviar);
+  outline-offset: 2px;
+  border-radius: 6px;
+  transition: none;
+}

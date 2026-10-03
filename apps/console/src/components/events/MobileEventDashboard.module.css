@@ -1,0 +1,89 @@
+.content { width: 100%; min-width: 0; max-width: 100%; color: #202022; font-size: 13px; }
+.content > div { min-width: 0; }
+.content h1 { font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.content h2, .content h3 { overflow-wrap: anywhere; }
+.content :global(.grid) { grid-template-columns: minmax(0, 1fr); }
+.content :global(.grid) > * { grid-column: auto; min-width: 0; }
+.content :global(.flex.items-center) { flex-wrap: wrap; }
+.content :global(.overflow-x-auto) { flex-wrap: nowrap; max-width: 100%; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.content :global(.overflow-x-auto) > button { flex-shrink: 0; }
+.content :global(.flex) > input { min-width: 0; }
+.content :global(.space-y-6) > :not(:last-child) { margin-bottom: 18px; }
+.content :global(.p-6), .content :global(.p-5) { padding: 16px; }
+.content :global(.shadow-2xs), .content :global(.shadow-sm) { box-shadow: none; }
+.content :is(button, a[class*="btn-"]) { min-height: 44px; }
+.content :is(button[class*="rounded"], a[class*="btn-"]) { border-radius: 999px; }
+.content :global(.btn-primary), .content [role="dialog"] button[type="submit"] { background: #fff; color: #202022; border: 1px solid #c4c4c9; border-radius: 999px; box-shadow: none; }
+.content :global(.btn-secondary), .content table button { background: #202022; color: #fff; border: 0; border-radius: 999px; box-shadow: none; }
+.content :global(.btn-primary):hover, .content [role="dialog"] button[type="submit"]:hover { background: #f5f5f5; }
+.content :global(.btn-secondary):hover, .content table button:hover { background: #343438; }
+.content :is(:global(.btn-primary), :global(.btn-secondary), table button) svg { color: currentColor; }
+.content :is(button, a) > svg, .overview svg { stroke-width: 1.5; }
+.content :is(:global(.btn-primary), :global(.btn-secondary), table button):disabled { opacity: .45; cursor: not-allowed; }
+.content button { touch-action: manipulation; }
+.content :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { font-size: 16px; max-width: 100%; min-width: 0; }
+.content :is(input:not([type="checkbox"]):not([type="radio"]), select) { min-height: 44px; }
+.content :is(button, a, input, select, textarea):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.content :global(.overflow-hidden):has(> table) { overflow-x: auto; max-width: 100%; }
+.content table { min-width: 520px; }
+.content table[data-mobile-records] { min-width: 0; display: block; width: 100%; }
+.content table[data-mobile-records] thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.content table[data-mobile-records] tbody { display: block; }
+.content table[data-mobile-records] tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; padding: 16px; border-bottom: 1px solid #dedee2; }
+.content table[data-mobile-records] tr:last-child { border-bottom: 0; }
+.content table[data-mobile-records] td { display: block; min-width: 0; padding: 0; overflow-wrap: anywhere; }
+.content table[data-mobile-records] td::before { content: var(--cell-label); display: block; color: #707077; font-size: 11px; font-weight: 400; margin-bottom: 4px; }
+.content table[data-mobile-records] :is(td:first-child, td:last-child, td[colspan]) { grid-column: 1 / -1; }
+.content table[data-mobile-records] td[colspan] { padding: 20px 0; }
+.content table[data-mobile-records] td:first-child { font-size: 14px; }
+.content table[data-mobile-records="tickets"] td:nth-child(2) { --cell-label: "Approval"; }
+.content table[data-mobile-records="tickets"] td:nth-child(3) { --cell-label: "Price"; }
+.content table[data-mobile-records="tickets"] td:nth-child(4) { --cell-label: "Capacity"; }
+.content table[data-mobile-records="tickets"] td:nth-child(5) { --cell-label: "Sold"; }
+.content table[data-mobile-records="tickets"] td:nth-child(6) { --cell-label: "Available"; }
+.content table[data-mobile-records="tickets"] td:nth-child(7) { --cell-label: "Sales window"; }
+.content table[data-mobile-records="tickets"] td:nth-child(8) { --cell-label: "Status"; }
+.content table[data-mobile-records="orders"] td:nth-child(2) { --cell-label: "Customer"; }
+.content table[data-mobile-records="orders"] td:nth-child(3) { --cell-label: "Ticket"; }
+.content table[data-mobile-records="orders"] td:nth-child(4) { --cell-label: "Amount"; }
+.content table[data-mobile-records="orders"] td:nth-child(5) { --cell-label: "Status"; }
+.content table[data-mobile-records="attendees"] td:nth-child(2) { --cell-label: "Ticket"; }
+.content table[data-mobile-records="attendees"] td:nth-child(3) { --cell-label: "Code"; }
+.content table[data-mobile-records="attendees"] td:nth-child(4) { --cell-label: "Entrance"; }
+/* Flatten only full-width wrapper panels; keep metric, record, and item cards */
+.content :global(.space-y-6) > :global(div.rounded-xl.border):not(:has(> table)) {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.content :global(.space-y-6) > :global(div.rounded-xl.border):not(:has(> table)):not(:last-child) {
+  border-bottom: 1px solid #e4e4e7;
+  padding-bottom: 20px;
+  margin-bottom: 4px;
+}
+.content [role="dialog"] { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.content [role="dialog"] :global(.px-6) { padding-inline: 16px; }
+.content [role="dialog"] :global(.py-6) { padding-block: 16px; }
+.overview { display: flex; flex-direction: column; gap: 22px; }
+.identity { display: flex; gap: 14px; align-items: center; }
+.identity > div { min-width: 0; }
+.identity img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.status { display: inline-block; margin-top: 6px; font-size: 12px; color: #707077; }
+.details { display: flex; flex-direction: column; gap: 10px; color: #707077; }
+.details p { display: flex; align-items: flex-start; gap: 10px; line-height: 1.5; }
+.details svg { flex-shrink: 0; margin-top: 2px; }
+.details span { overflow-wrap: anywhere; }
+.primary { display: flex; align-items: center; gap: 10px; min-height: 48px; background: #fff; color: #202022; border: 1px solid #c4c4c9; padding: 12px 18px; border-radius: 999px; font-size: 14px; font-weight: 500; }
+.primary:hover { background: #f5f5f5; }
+.primary svg:last-child { margin-left: auto; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-block: 4px; }
+.metrics dt { font-size: 12px; color: #707077; }
+.metrics dd { margin: 4px 0 0; font-size: 28px; line-height: 1.3; font-weight: 600; font-variant-numeric: tabular-nums; }
+.shortcuts { border-block: 1px solid #dedee2; }
+.shortcuts a { display: flex; align-items: center; min-height: 60px; gap: 12px; padding: 12px 0; font-size: 14px; }
+.shortcuts a + a { border-top: 1px solid #dedee2; }
+.shortcuts svg { flex-shrink: 0; color: #707077; }
+.shortcuts svg:last-child { margin-left: auto; }
+.shortcuts small { display: block; color: #707077; font-size: 12px; margin-top: 3px; }
+.preview { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; font-size: 13px; color: #707077; }

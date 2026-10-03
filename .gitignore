@@ -1,0 +1,18 @@
+# Local operational notes with production secrets — never commit this.
+claudememory.md
+
+# Shared dev fallback store — real user emails/attendee records, never commit this.
+.server_data/
+
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.log
+*.exe
+__pycache__/
+*.py[cod]
+test-results/
+.turbo/
+

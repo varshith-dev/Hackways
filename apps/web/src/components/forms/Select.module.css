@@ -1,0 +1,28 @@
+.wrap { position: relative; }
+.trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
+  border-radius: 0; padding: 10px 0 12px; font-size: 15px; line-height: 1.6;
+  background: transparent; color: var(--ink); cursor: pointer;
+}
+.trigger[data-empty="true"] { color: var(--muted); }
+.trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.chevron { flex-shrink: 0; color: var(--muted); transition: transform .15s ease-out; }
+.trigger[data-open="true"] .chevron { transform: rotate(180deg); }
+
+.panel {
+  position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; right: 0;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.12); padding: 6px; max-height: 280px; overflow-y: auto;
+}
+.option {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+  text-align: left; padding: 9px 10px; font-size: 13px; color: var(--ink); border-radius: 8px; cursor: pointer;
+}
+.option:hover, .option[data-highlighted="true"] { background: var(--soft); }
+.option[data-selected="true"] { font-weight: 600; }
+.optionText { min-width: 0; }
+.optionLabel { display: block; }
+.optionSupport { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+.check { flex-shrink: 0; color: var(--accent); }
+.divider { height: 1px; background: var(--line); margin: 6px 4px; }

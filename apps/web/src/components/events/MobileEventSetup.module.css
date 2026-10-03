@@ -1,0 +1,149 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  color: #202022;
+}
+
+.field { margin-bottom: 24px; }
+.field label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.field label span { color: #707077; font-size: 12px; font-weight: 400; }
+.field input, .field textarea {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #dedee2;
+  border-radius: 0;
+  padding: 8px 0 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  background: transparent;
+  color: #202022;
+  caret-color: #202022;
+}
+.field textarea { resize: none; min-height: 72px; }
+.field input::placeholder, .field textarea::placeholder { color: #a1a1a8; opacity: 1; }
+.field :is(input, textarea):focus { outline: none; box-shadow: none; border-bottom-color: #202022; }
+.field:focus-within label { color: #202022; }
+
+.slugRow { display: flex; align-items: baseline; gap: 4px; border-bottom: 1px solid #dedee2; }
+.slugRow span { color: #707077; font-size: 14px; flex-shrink: 0; }
+.slugRow input { border-bottom: 0; flex: 1; min-width: 0; }
+.slugRow:focus-within { border-bottom-color: #202022; }
+.previewLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #707077;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.section { border-top: 1px solid #e4e4e7; padding-top: 20px; margin-top: 8px; }
+.section h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+.section h2 span { color: #707077; font-size: 12px; font-weight: 400; }
+.hint { color: #707077; font-size: 12px; line-height: 1.6; margin-top: 8px; }
+
+.artworkRow { display: grid; grid-template-columns: minmax(0, 16fr) minmax(0, 9fr); gap: 16px; align-items: start; }
+.tile { min-width: 0; }
+.tileSurface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 1px dashed #c9c9cf;
+  border-radius: 10px;
+  background: #f7f7f8;
+  color: #707077;
+  overflow: hidden;
+  cursor: pointer;
+}
+.tileSurface:hover { border-color: #202022; color: #202022; }
+.tileSurface img { width: 100%; height: 100%; object-fit: cover; }
+.tileMeta { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 12px; }
+.tileMeta > div { display: flex; gap: 2px; }
+.tileMeta button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #707077;
+  cursor: pointer;
+}
+.tileMeta button:hover { color: #202022; }
+.tile .field { margin: 8px 0 0; }
+.tile .field input { font-size: 13px; padding: 6px 0 8px; }
+.tileError { color: #a12b2b; font-size: 12px; line-height: 1.5; margin-top: 6px; }
+
+.segmented { display: flex; gap: 8px; }
+.segmented button {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid #c4c4c9;
+  border-radius: 999px;
+  background: #fff;
+  color: #202022;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.segmented button.segmentActive { background: #202022; border-color: #202022; color: #fff; }
+
+.actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #e4e4e7;
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.secondary { background: #fff; color: #202022; border: 1px solid #c4c4c9; }
+.primary { background: #202022; color: #fff; border: 0; }
+.actions button:disabled { opacity: .45; cursor: not-allowed; }
+
+.missing { padding-block: 48px; }
+.missing h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.missing p { color: #707077; font-size: 14px; margin-bottom: 20px; }
+.missing a { font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
+
+.spinner { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.page :is(button, a):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

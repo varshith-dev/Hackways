@@ -1,0 +1,13 @@
+.main { min-height: calc(100svh - 100px); max-width: 560px; margin: 0 auto; padding: 40px 24px 100px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 22px; }
+.main h1 { font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: -.03em; text-wrap: balance; }
+.main p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 10px; overflow-wrap: anywhere; }
+.progress { position: relative; width: 116px; height: 116px; margin-bottom: 12px; }
+.progress > svg:first-child { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+.track, .fill { fill: none; stroke-width: 12; }
+.track { stroke: var(--line); }
+.fill { stroke: #ffd329; stroke-linecap: round; transition: stroke-dashoffset .4s ease-out; }
+.check { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--ink); }
+.actions { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 6px; }
+.actions > a { font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 600px) { .main h1 { font-size: 24px; } }
+@media (prefers-reduced-motion: reduce) { .fill { transition: none; } }

@@ -1,0 +1,48 @@
+.wrap { position: relative; }
+.trigger {
+  display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line);
+  border-radius: 0; padding: 10px 0 12px; font-size: 15px; line-height: 1.6; background: transparent;
+  color: var(--ink); cursor: pointer;
+}
+.trigger[data-empty="true"] { color: var(--muted); }
+.trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.backdrop { position: fixed; inset: 0; z-index: 40; background: rgba(20, 20, 35, 0.45); }
+.panel {
+  position: fixed; z-index: 41; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(360px, 90vw); max-height: 90vh; overflow-y: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25); padding: 18px;
+}
+.monthRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.monthRow strong { font-size: 14px; font-weight: 600; }
+.monthRow button { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: var(--muted); cursor: pointer; border-radius: 999px; }
+.monthRow button:hover { color: var(--ink); background: var(--soft); }
+.weekRow { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.weekRow span { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; }
+.dayGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; border-radius: 999px; cursor: pointer; color: var(--ink); }
+.day:hover { background: var(--soft); }
+.day[data-outside="true"] { color: var(--muted); opacity: .4; }
+.day[data-selected="true"] { background: var(--accent); color: var(--accent-foreground); }
+.day[data-selected="true"]:hover { background: var(--accent-hover); }
+.day[data-today="true"]:not([data-selected="true"]) { box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
+
+.timeRow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); }
+.timeField { display: flex; flex-direction: column; align-items: center; }
+.timeField input {
+  width: 44px; text-align: center; border: 1px solid var(--line); border-radius: 8px; padding: 6px 0;
+  font-size: 15px; background: transparent; color: var(--ink);
+}
+.timeField input:focus { outline: none; border-color: var(--accent); }
+.timeSep { font-size: 15px; color: var(--muted); align-self: center; margin-top: 8px; }
+.ampm { display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+.ampm button { font-size: 11px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); cursor: pointer; }
+.ampm button[data-active="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+.actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 14px; }
+.actions button { font-size: 13px; font-weight: 500; min-height: 32px; cursor: pointer; }
+.actions .save { padding: 0 16px; border-radius: 999px; background: var(--accent); color: var(--accent-foreground); }
+.actions .save:hover:not(:disabled) { background: var(--accent-hover); }
+.actions .cancel { color: var(--muted); }
+.actions .cancel:hover { color: var(--ink); }

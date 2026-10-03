@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package eventflow.v1;
+
+option go_package = "github.com/eventflow/rsvp-core/gen/eventflow/v1;eventflowv1";
+
+service RSVPService {
+  rpc GetEventCapacity(GetEventCapacityRequest) returns (GetEventCapacityResponse);
+  rpc GetRSVPStatus(GetRSVPStatusRequest) returns (GetRSVPStatusResponse);
+  rpc TriggerReconciliation(TriggerReconciliationRequest) returns (TriggerReconciliationResponse);
+}
+
+message GetEventCapacityRequest {
+  string event_id = 1;
+  string tier_id = 2;
+}
+
+message GetEventCapacityResponse {
+  string event_id = 1;
+  string tier_id = 2;
+  int32 total_capacity = 3;
+  int32 remaining_capacity = 4;
+  int32 confirmed_count = 5;
+  int32 waitlist_count = 6;
+  bool is_sold_out = 7;
+}
+
+message GetRSVPStatusRequest {
+  string rsvp_id = 1;
+}
+
+message GetRSVPStatusResponse {
+  string rsvp_id = 1;
+  string event_id = 2;
+  string user_id = 3;
+  string tier_id = 4;
+  string status = 5; // CONFIRMED, WAITLIST, PENDING_CONFIRMATION, CANCELLED
+  int32 waitlist_position = 6;
+  string created_at = 7;
+}
+
+message TriggerReconciliationRequest {
+  string event_id = 1;
+}
+
+message TriggerReconciliationResponse {
+  bool success = 1;
+  int32 discrepancy_corrected = 2;
+  string message = 3;
+}

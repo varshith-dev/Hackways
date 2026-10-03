@@ -1,0 +1,107 @@
+services:
+  # PostgreSQL: ACID source of truth for capacity & RSVP records
+  postgres:
+    image: postgres:16-alpine
+    container_name: eventflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eventflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../services/rsvp-core/migrations/000001_init_schema.up.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./seeds/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d eventflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Valkey: Linux Foundation high-performance drop-in replacement for Redis
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: eventflow-valkey
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "512mb", "--maxmemory-policy", "volatile-lru"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # NATS JetStream: Low-latency async event bus for decoupled fan-out.
+  # eventbus/nats.go asks for jetstream.FileStorage — that's only real
+  # durability if the store dir is on a volume, so it is here.
+  nats:
+    image: nats:2.10-alpine
+    container_name: eventflow-nats
+    restart: unless-stopped
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "127.0.0.1:4222:4222" # NATS client port
+      - "127.0.0.1:8222:8222" # NATS monitoring dashboard
+    volumes:
+      - natsdata:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8222/varz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Go RSVP Core: The hot path for capacity accounting, waitlists, and rate limiting
+  rsvp-core:
+    build:
+      context: ../services/rsvp-core
+      dockerfile: Dockerfile
+    container_name: eventflow-rsvp-core
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080" # REST & SSE
+      - "127.0.0.1:50051:50051" # gRPC
+    environment:
+      PORT: "8080"
+      GRPC_PORT: "50051"
+      DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/eventflow?sslmode=disable"
+      AUTH_SECRET: "${AUTH_SECRET}"
+      VALKEY_ADDR: "valkey:6379"
+      NATS_URL: "nats://nats:4222"
+      DB_MAX_OPEN_CONNS: "50"
+      DB_MAX_IDLE_CONNS: "25"
+      WAITLIST_WORKERS: "8"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  # Python Insights & Orchestration: Analytics, velocity tracking, and notification fan-out
+  insights:
+    build:
+      context: ../services/insights
+      dockerfile: Dockerfile
+    container_name: eventflow-insights
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PORT: "8000"
+      NATS_URL: "nats://nats:4222"
+      VALKEY_ADDR: "valkey:6379"
+      GRPC_TARGET: "rsvp-core:50051"
+      FLASH_CROWD_THRESHOLD: "50"
+    depends_on:
+      nats:
+        condition: service_healthy
+      rsvp-core:
+        condition: service_started
+
+volumes:
+  pgdata:
+  natsdata:

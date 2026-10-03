@@ -1,0 +1,10 @@
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+nats-py>=2.9.0
+redis>=5.2.0
+pydantic>=2.10.0
+httpx>=0.28.0
+grpcio>=1.68.0
+grpcio-tools>=1.68.0
+pytest>=8.3.0
+pytest-asyncio>=0.24.0

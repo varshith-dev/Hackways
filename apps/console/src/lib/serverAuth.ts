@@ -1,0 +1,34 @@
+import { NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME, SessionClaims, SessionRole, verifySessionToken } from "./sessionToken";
+
+function tokenFromRequest(req: Request): string | undefined {
+  const cookieHeader = req.headers.get("cookie") || "";
+  const match = cookieHeader
+    .split(";")
+    .map((p) => p.trim())
+    .find((p) => p.startsWith(`${SESSION_COOKIE_NAME}=`));
+  return match ? decodeURIComponent(match.slice(SESSION_COOKIE_NAME.length + 1)) : undefined;
+}
+
+export function getSession(req: Request): SessionClaims | null {
+  return verifySessionToken(tokenFromRequest(req));
+}
+
+/**
+ * Verifies the caller is authenticated and, if roles are given, holds one of them.
+ * Returns the claims on success, or a ready-to-return NextResponse on failure —
+ * callers do `const s = requireSession(req); if (s instanceof NextResponse) return s;`
+ */
+export function requireSession(
+  req: Request,
+  roles?: SessionRole[]
+): SessionClaims | NextResponse {
+  const claims = getSession(req);
+  if (!claims) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  if (roles && !roles.includes(claims.role)) {
+    return NextResponse.json({ error: "You don't have permission to do that" }, { status: 403 });
+  }
+  return claims;
+}
