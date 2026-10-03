@@ -534,7 +534,7 @@ export default function EventDashboardView({
     const isPaid = Number(t.price) > 0;
     setTierDrawerIsPaid(isPaid);
     setTierDrawerPrice(String(t.price || 0));
-    setTierDrawerCap(String(t.inventory));
+    setTierDrawerCap(t.inventory > 0 ? String(t.inventory) : "");
     setTierDrawerStatus(t.status === "DISABLED" ? "DISABLED" : "ACTIVE");
     setTierDrawerApprovalMode(t.approvalMode || "AUTO_APPROVE");
     setTierDrawerSalesStart(t.salesStart || new Date().toISOString().split("T")[0]);
@@ -561,7 +561,7 @@ export default function EventDashboardView({
     e.preventDefault();
     if (!tierDrawerName.trim()) return;
     const priceNum = tierDrawerIsPaid ? Math.max(0, Number(tierDrawerPrice) || 0) : 0;
-    const capNum = Math.max(1, Number(tierDrawerCap) || 100);
+    const capNum = Number(tierDrawerCap) > 0 ? Math.floor(Number(tierDrawerCap)) : 0;
     const startStr = tierDrawerSalesStart || new Date().toISOString().split("T")[0];
     const endStr = tierDrawerSalesEnd || editStartTime?.split("T")[0] || "";
 
@@ -574,8 +574,8 @@ export default function EventDashboardView({
               name: tierDrawerName.trim(),
               price: priceNum,
               inventory: capNum,
-              available: Math.max(0, capNum - t.sold),
-              status: tierDrawerStatus,
+              available: capNum > 0 ? Math.max(0, capNum - t.sold) : 0,
+              status: tierDrawerStatus === "DISABLED" ? "DISABLED" : (capNum > 0 && Math.max(0, capNum - t.sold) <= 0 ? "SOLD_OUT" : "ACTIVE"),
               approvalMode: tierDrawerApprovalMode,
               salesStart: startStr,
               salesEnd: endStr,
@@ -908,6 +908,8 @@ export default function EventDashboardView({
   // event record enough to crash SSR.
   const handleBannerFileUpload = async (file: File) => {
     if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    setEditBannerUrl(localUrl);
     setIsUploadingBanner(true);
     try {
       const url = await readImageFile(file);
@@ -930,6 +932,8 @@ export default function EventDashboardView({
 
   const handleSquareBannerFileUpload = async (file: File) => {
     if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    setEditSquareBannerUrl(localUrl);
     setIsUploadingSquareBanner(true);
     try {
       const url = await readImageFile(file);
@@ -1068,7 +1072,7 @@ export default function EventDashboardView({
     e.preventDefault();
     if (!newTierName.trim()) return;
     const priceNum = newTierIsPaid ? Math.max(0, Number(newTierPrice) || 0) : 0;
-    const capNum = Number(newTierCap) || 100;
+    const capNum = Number(newTierCap) > 0 ? Math.floor(Number(newTierCap)) : 0;
     const newTierItem: EventTicketTier = {
       id: `tkt_${Date.now()}`,
       name: newTierName.trim(),
@@ -2116,93 +2120,23 @@ export default function EventDashboardView({
                   {/* Two Banners Section: Rule requires both 16:9 and 1:1 */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* 1. 16:9 Landscape Banner */}
-                    <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-zinc-900">
-                            16:9 Landscape Banner
-                          </label>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-700">
-                            Hero & Featured
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsCustomUrlOpen(!isCustomUrlOpen)}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-800 underline transition"
-                        >
-                          {isCustomUrlOpen ? "Upload File" : "Image URL"}
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-zinc-500">
-                        Featured hero showcase on Explore, event header, and wide displays.
-                      </p>
-
-                      {isCustomUrlOpen ? (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editBannerUrl}
-                            onChange={(e) => setEditBannerUrl(e.target.value)}
-                            placeholder="https://... 16:9 image link"
-                            aria-label="Landscape banner URL"
-                            className="w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-zinc-900 font-mono text-[11px]"
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-900 block">
+                        Landscape Banner (16:9)
+                      </label>
+                      {editBannerUrl ? (
+                        <div className="relative aspect-16/9 w-full rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 group">
+                          <img
+                            src={editBannerUrl}
+                            alt="16:9 banner"
+                            className="w-full h-full object-cover"
                           />
-                        </div>
-                      ) : (
-                        <div>
-                          {editBannerUrl ? (
-                            <div className="rounded-lg border border-zinc-200 overflow-hidden bg-zinc-50 space-y-2 p-2.5">
-                              <div className="relative aspect-16/9 w-full rounded-md overflow-hidden bg-zinc-900 border border-zinc-200 shadow-2xs">
-                                <img
-                                  src={editBannerUrl}
-                                  alt="16:9 banner preview"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="flex items-center justify-between pt-1">
-                                <span className="text-[11px] text-zinc-500">Active 16:9 Banner</span>
-                                <div className="flex items-center gap-2">
-                                  <label className="btn-secondary cursor-pointer py-1 px-2.5 text-xs">
-                                    <span>Replace</span>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        if (e.target.files?.[0]) {
-                                          handleBannerFileUpload(e.target.files[0]);
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditBannerUrl("")}
-                                    className="text-xs text-red-600 hover:text-red-700 font-medium px-1.5"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <label className="border-2 border-dashed border-zinc-300 hover:border-zinc-500 rounded-lg p-5 flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer group">
-                              <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 group-hover:scale-105 transition-transform shadow-2xs">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                                </svg>
-                              </div>
-                              <div className="text-center">
-                                <span className="text-xs font-semibold text-zinc-900 block">
-                                  {isUploadingBanner ? "Uploading..." : "Upload 16:9 Banner"}
-                                </span>
-                                <span className="text-[10px] text-zinc-400">16:9 Landscape (e.g. 1600x900)</span>
-                              </div>
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <label className="btn-secondary cursor-pointer py-1.5 px-3 text-xs bg-white text-zinc-900 font-semibold rounded-lg shadow-sm">
+                              <span>Change</span>
                               <input
                                 type="file"
                                 accept="image/*"
-                                disabled={isUploadingBanner}
                                 className="hidden"
                                 onChange={(e) => {
                                   if (e.target.files?.[0]) {
@@ -2211,99 +2145,68 @@ export default function EventDashboardView({
                                 }}
                               />
                             </label>
-                          )}
+                            <button
+                              type="button"
+                              onClick={() => setEditBannerUrl("")}
+                              className="py-1.5 px-3 text-xs bg-red-600 text-white font-semibold rounded-lg shadow-sm hover:bg-red-700"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
+                      ) : (
+                        <label
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files?.[0]) {
+                              handleBannerFileUpload(e.dataTransfer.files[0]);
+                            }
+                          }}
+                          className="aspect-16/9 w-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-500 shadow-2xs">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                            </svg>
+                          </div>
+                          <span className="text-xs font-medium text-zinc-700">
+                            {isUploadingBanner ? "Uploading..." : "Upload 16:9 banner"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploadingBanner}
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                handleBannerFileUpload(e.target.files[0]);
+                              }
+                            }}
+                          />
+                        </label>
                       )}
                     </div>
 
                     {/* 2. 1:1 Square Banner */}
-                    <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-zinc-900">
-                            1:1 Square Banner
-                          </label>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-700">
-                            Poster & Card
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsCustomSquareUrlOpen(!isCustomSquareUrlOpen)}
-                          className="text-[11px] text-zinc-500 hover:text-zinc-800 underline transition"
-                        >
-                          {isCustomSquareUrlOpen ? "Upload File" : "Image URL"}
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-zinc-500">
-                        Timeline event cards, compact mobile lists, and feed posters.
-                      </p>
-
-                      {isCustomSquareUrlOpen ? (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editSquareBannerUrl}
-                            onChange={(e) => setEditSquareBannerUrl(e.target.value)}
-                            placeholder="https://... 1:1 square image link"
-                            aria-label="Square banner URL"
-                            className="w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-zinc-900 font-mono text-[11px]"
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-zinc-900 block">
+                        Square Poster (1:1)
+                      </label>
+                      {editSquareBannerUrl ? (
+                        <div className="relative aspect-square max-w-[260px] mx-auto rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 group">
+                          <img
+                            src={editSquareBannerUrl}
+                            alt="1:1 poster"
+                            className="w-full h-full object-cover"
                           />
-                        </div>
-                      ) : (
-                        <div>
-                          {editSquareBannerUrl ? (
-                            <div className="rounded-lg border border-zinc-200 overflow-hidden bg-zinc-50 space-y-2 p-2.5">
-                              <div className="relative aspect-square max-w-[200px] mx-auto rounded-md overflow-hidden bg-zinc-900 border border-zinc-200 shadow-2xs">
-                                <img
-                                  src={editSquareBannerUrl}
-                                  alt="1:1 banner preview"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="flex items-center justify-between pt-1">
-                                <span className="text-[11px] text-zinc-500">Active 1:1 Poster</span>
-                                <div className="flex items-center gap-2">
-                                  <label className="btn-secondary cursor-pointer py-1 px-2.5 text-xs">
-                                    <span>Replace</span>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        if (e.target.files?.[0]) {
-                                          handleSquareBannerFileUpload(e.target.files[0]);
-                                        }
-                                      }}
-                                    />
-                                  </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditSquareBannerUrl("")}
-                                    className="text-xs text-red-600 hover:text-red-700 font-medium px-1.5"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <label className="border-2 border-dashed border-zinc-300 hover:border-zinc-500 rounded-lg p-5 flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer group">
-                              <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 group-hover:scale-105 transition-transform shadow-2xs">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-                                </svg>
-                              </div>
-                              <div className="text-center">
-                                <span className="text-xs font-semibold text-zinc-900 block">
-                                  {isUploadingSquareBanner ? "Uploading..." : "Upload 1:1 Poster"}
-                                </span>
-                                <span className="text-[10px] text-zinc-400">1:1 Square (e.g. 800x800)</span>
-                              </div>
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <label className="btn-secondary cursor-pointer py-1.5 px-3 text-xs bg-white text-zinc-900 font-semibold rounded-lg shadow-sm">
+                              <span>Change</span>
                               <input
                                 type="file"
                                 accept="image/*"
-                                disabled={isUploadingSquareBanner}
                                 className="hidden"
                                 onChange={(e) => {
                                   if (e.target.files?.[0]) {
@@ -2312,8 +2215,47 @@ export default function EventDashboardView({
                                 }}
                               />
                             </label>
-                          )}
+                            <button
+                              type="button"
+                              onClick={() => setEditSquareBannerUrl("")}
+                              className="py-1.5 px-3 text-xs bg-red-600 text-white font-semibold rounded-lg shadow-sm hover:bg-red-700"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
+                      ) : (
+                        <label
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files?.[0]) {
+                              handleSquareBannerFileUpload(e.dataTransfer.files[0]);
+                            }
+                          }}
+                          className="aspect-square max-w-[260px] mx-auto w-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-500 shadow-2xs">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                            </svg>
+                          </div>
+                          <span className="text-xs font-medium text-zinc-700">
+                            {isUploadingSquareBanner ? "Uploading..." : "Upload 1:1 poster"}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            disabled={isUploadingSquareBanner}
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                handleSquareBannerFileUpload(e.target.files[0]);
+                              }
+                            }}
+                          />
+                        </label>
                       )}
                     </div>
                   </div>

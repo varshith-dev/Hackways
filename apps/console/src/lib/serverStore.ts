@@ -254,7 +254,7 @@ export const serverStore = {
 
     // Default General Admission (Free) tier for every event if none provided
     if (idx === -1 && (!event.tiers || event.tiers.length === 0)) {
-      const capacity = event.total_capacity || 100;
+      const capacity = event.total_capacity || 0;
       event.tiers = [
         {
           id: `tkt_${Date.now()}`,

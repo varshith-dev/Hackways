@@ -9,9 +9,12 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Next 16 allowlists image qualities and defaults to [75]; any other value
-    // is rejected with a 400 rather than falling back. 95 is here for the hero
-    // artwork — a smooth gradient, which is what lossy re-encoding bands most.
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "crinmedia.blob.core.windows.net",
+      },
+    ],
     qualities: [75, 95],
   },
 };

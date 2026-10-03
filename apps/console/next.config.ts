@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   // that occurs every time the console is rebuilt with a new BUILD_ID.
   assetPrefix: process.env.NODE_ENV === "production" ? "/console" : "",
   images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "crinmedia.blob.core.windows.net",
+      },
+    ],
     qualities: [75, 95],
   },
 };

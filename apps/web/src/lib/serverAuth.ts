@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME, SessionClaims, SessionRole, verifySessionToken } from "./sessionToken";
 
 function tokenFromRequest(req: Request): string | undefined {
+  const authHeader = req.headers.get("authorization") || "";
+  if (authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7).trim();
+  }
   const cookieHeader = req.headers.get("cookie") || "";
   const match = cookieHeader
     .split(";")

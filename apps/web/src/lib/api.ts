@@ -262,12 +262,12 @@ export function saveEvent(event: EventItem): EventItem {
         event_id: event.id,
         name: "General Admission",
         price_cents: 0,
-        total_capacity: 100,
-        remaining_capacity: 100,
+        total_capacity: 0,
+        remaining_capacity: 0,
         approval_mode: "AUTO_APPROVE" as const,
       };
       event.tiers = [defaultTier];
-      event.total_capacity = event.total_capacity || 100;
+      event.total_capacity = event.total_capacity || 0;
     }
 
     // Strip tiers from the bulk store — they live in hackways_tiers_${id} exclusively
@@ -298,13 +298,23 @@ export function saveEvent(event: EventItem): EventItem {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(event),
-      }).catch(() => {
-        fetch("/api/v1/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(event),
-        }).catch(() => {});
-      });
+      })
+        .then((res) => {
+          if (!res.ok && res.status === 404) {
+            return fetch("/api/v1/events", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(event),
+            });
+          }
+        })
+        .catch(() => {
+          fetch("/api/v1/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(event),
+          }).catch(() => {});
+        });
     } catch {}
 
     window.dispatchEvent(new CustomEvent("hackways_events_updated", { detail: event }));

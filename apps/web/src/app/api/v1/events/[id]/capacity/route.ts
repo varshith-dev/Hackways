@@ -39,8 +39,8 @@ export async function GET(
     ? event.tiers?.find((t) => t.id === tierId)
     : event.tiers?.[0];
 
-  const totalCap = selectedTier ? selectedTier.total_capacity : (event.total_capacity || 100);
-  const remainingCap = selectedTier ? selectedTier.remaining_capacity : totalCap;
+  const totalCap = selectedTier ? selectedTier.total_capacity : (event.total_capacity || 0);
+  const remainingCap = selectedTier ? (selectedTier.remaining_capacity ?? 0) : totalCap;
   const attendees = serverStore.getAttendees(eventId);
   const confirmedCount = attendees.filter((a) => a.status === "CONFIRMED" || a.status === "CHECKED_IN").length;
   const waitlistCount = attendees.filter((a) => a.status === "WAITLIST").length;
@@ -52,6 +52,6 @@ export async function GET(
     remaining_capacity: Math.max(0, remainingCap),
     confirmed_count: confirmedCount,
     waitlist_count: waitlistCount,
-    is_sold_out: remainingCap <= 0,
+    is_sold_out: totalCap > 0 ? remainingCap <= 0 : false,
   });
 }
