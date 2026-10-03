@@ -332,24 +332,24 @@ export default function EventDetailPageClient({
     >
       {/* Ambient atmosphere: strictly contained to the top hero banner header */}
       {isAmbient && (event.banner_url || event.square_banner_url) && (
-        <div className="pointer-events-none absolute top-0 inset-x-0 h-[380px] overflow-hidden select-none z-0" aria-hidden="true">
+        <div className="pointer-events-none absolute top-0 inset-x-0 h-[460px] overflow-hidden select-none z-0" aria-hidden="true">
           <div
-            className="absolute inset-x-[-5%] -top-20 h-[400px] transform-gpu"
+            className="absolute inset-x-[-10%] -top-24 h-[520px] transform-gpu"
             style={{
               backgroundImage: `url(${event.banner_url || event.square_banner_url})`,
               backgroundSize: "cover",
               backgroundPosition: "center 20%",
-              opacity: isDarkTheme ? 0.32 : 0.18,
-              filter: "blur(60px) saturate(1.2)",
+              opacity: isDarkTheme ? 0.35 : 0.22,
+              filter: "blur(70px) saturate(1.35)",
               transform: "translate3d(0,0,0)",
-              maskImage: "radial-gradient(100% 70% at 50% 10%, black 20%, transparent 75%)",
-              WebkitMaskImage: "radial-gradient(100% 70% at 50% 10%, black 20%, transparent 75%)",
+              maskImage: "radial-gradient(100% 70% at 50% 15%, black 25%, transparent 80%)",
+              WebkitMaskImage: "radial-gradient(100% 70% at 50% 15%, black 25%, transparent 80%)",
             }}
           />
           {/* Strict fade-out into canvas before hero content ends */}
           <div
-            className="absolute inset-x-0 bottom-0 h-36 pointer-events-none"
-            style={{ background: `linear-gradient(to bottom, transparent, ${fadeColor} 90%)` }}
+            className="absolute inset-x-0 bottom-0 h-40 pointer-events-none"
+            style={{ background: `linear-gradient(to bottom, transparent, ${fadeColor} 92%)` }}
           />
         </div>
       )}
@@ -365,397 +365,397 @@ export default function EventDetailPageClient({
       {/* Seamlessly Integrated Header with Subtle Glassy Feel and No Border (Locked at Top) */}
       <AppHeader theme={isDarkTheme ? "dark" : "light"} transparent={true} />
 
-      <main className="relative z-10 flex-1 flex flex-col justify-between w-full max-w-6xl xl:max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 pt-24 sm:pt-28 pb-12">
+      {/* Main container: Full-width with minimal safe edge spacing matching AppHeader (no artificial center squishing) */}
+      <main className="relative z-10 flex-1 flex flex-col justify-between w-full px-6 sm:px-10 lg:px-14 pt-24 sm:pt-28 pb-12">
         <div className="space-y-12 sm:space-y-16">
           {/* 01. Hero Section (Most Prior) */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          {/* Mobile Poster (Adapts to acceptable 16:9 and 1:1 ratios) */}
-          <div className="block lg:hidden order-1">
-            <div
-              className={`${
-                aspectRatio === "16/9" ? "aspect-16/9 max-w-lg" : "aspect-square max-w-xs"
-              } w-full mx-auto overflow-hidden rounded-2xl border shadow-xs ${
-                isDarkTheme ? "bg-zinc-900 border-zinc-800" : "bg-zinc-100 border-zinc-200"
-              }`}
-            >
-              {(event.square_banner_url || event.banner_url) ? (
-                <img
-                  src={event.square_banner_url || event.banner_url}
-                  alt={event.title}
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="h-full w-full flex flex-col justify-between p-5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 text-white relative overflow-hidden">
-                  <div className="flex items-center justify-between text-zinc-400">
-                    <span className="text-[10px] font-mono uppercase tracking-widest">Hackways</span>
-                    <TicketIcon size={14} className="text-zinc-500" />
-                  </div>
-                  <div>
-                    <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-xs mb-2">
-                      {event.title.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="text-sm font-bold font-heading line-clamp-1">{event.title}</div>
-                    <div className="text-[11px] text-zinc-400 mt-0.5">{event.time_display || event.start_time || "Upcoming"}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Left Column: Event Information & Actions */}
-          <div className="lg:col-span-7 space-y-6 order-2 lg:order-1">
-            <h1
-              className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-heading leading-tight ${
-                isDarkTheme ? "text-white" : "text-zinc-950"
-              }`}
-            >
-              {event.title}
-            </h1>
-
-            {/* Action Buttons Row: Navigates directly to dedicated RSVP path */}
-            <div className="flex items-center gap-3 pt-1">
-              {!event.tiers || event.tiers.length === 0 ? (
-                <span
-                  className={`inline-flex items-center justify-center rounded-full h-11 px-7 text-xs font-semibold select-none ${
-                    isDarkTheme
-                      ? "bg-zinc-800 text-zinc-400 border border-zinc-700/60"
-                      : "bg-zinc-100 text-zinc-400 border border-zinc-200"
-                  }`}
-                >
-                  Tickets coming soon
-                </span>
-              ) : (
-                <Link
-                  href={`/events/${id}/rsvp`}
-                  className={`inline-flex items-center justify-center gap-2 rounded-full h-11 px-7 text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
-                    isDarkTheme
-                      ? "bg-white text-zinc-950 shadow-xs hover:bg-zinc-100"
-                      : "bg-zinc-950 text-white shadow-xs hover:bg-zinc-800"
-                  }`}
-                >
-                  <span>
-                    {existingRSVP && existingRSVP.status !== "CANCELLED"
-                      ? existingRSVP.status === "PENDING_APPROVAL"
-                        ? "Application Submitted"
-                        : existingRSVP.status === "WAITLIST"
-                        ? "Waitlist Status"
-                        : "My Ticket"
-                      : isSoldOut
-                      ? "Join Waitlist"
-                      : "RSVP Now"}
-                  </span>
-                  <ArrowRightIcon size={14} />
-                </Link>
-              )}
-            </div>
-
-            {/* Event Metadata */}
-            <div
-              className={`pt-4 border-t space-y-2.5 text-xs ${
-                isDarkTheme ? "border-zinc-800/80 text-zinc-300" : "border-zinc-200 text-zinc-700"
-              }`}
-            >
-              {/* Date & Time */}
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                    isDarkTheme ? "bg-zinc-800/80 text-zinc-400" : "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  <CalendarIcon size={14} />
-                </div>
-                <div>
-                  <span className={`font-semibold ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                    {event.time_display || event.start_time || "Date to be announced"}
-                  </span>
-                  {event.end_time && (
-                    <span className={isDarkTheme ? "text-zinc-500" : "text-zinc-400"}> — {event.end_time}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                    isDarkTheme ? "bg-zinc-800/80 text-zinc-400" : "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  <MapPinIcon size={14} />
-                </div>
-                <div>
-                  <span className={`font-semibold ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                    {event.location || "Venue announced after RSVP"}
-                  </span>
-                  {event.city && (
-                    <span className={isDarkTheme ? "text-zinc-500" : "text-zinc-400"}>, {event.city}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Channel Attribution */}
-              {event.channel_name && (
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 border border-zinc-700/50">
-                    {event.channel_avatar ? (
-                      <img
-                        src={event.channel_avatar}
-                        alt={event.channel_name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div
-                        className={`w-full h-full flex items-center justify-center text-[10px] font-bold ${
-                          isDarkTheme ? "bg-zinc-800 text-zinc-200" : "bg-zinc-100 text-zinc-800"
-                        }`}
-                      >
-                        {event.channel_name.charAt(0)}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Link
-                      href={`/channels/${event.channel_slug || event.channel_id}`}
-                      className={`font-semibold hover:underline ${
-                        isDarkTheme ? "text-white" : "text-zinc-950"
-                      }`}
-                    >
-                      {event.channel_name}
-                    </Link>
-                    <span className={`text-[11px] ml-1.5 ${isDarkTheme ? "text-zinc-500" : "text-zinc-400"}`}>
-                      Host
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Desktop Poster (Adapts to 16:9 and 1:1 ratios) */}
-          <div className="hidden lg:block lg:col-span-5 order-2">
-            <div
-              className={`${
-                aspectRatio === "16/9" ? "aspect-16/9" : "aspect-square"
-              } w-full overflow-hidden rounded-2xl border shadow-xs ${
-                isDarkTheme ? "bg-zinc-900 border-zinc-800" : "bg-zinc-100 border-zinc-200"
-              }`}
-            >
-              {(event.banner_url || event.square_banner_url) ? (
-                <img
-                  src={event.banner_url || event.square_banner_url}
-                  alt={event.title}
-                  className="h-full w-full object-cover object-center"
-                />
-              ) : (
-                <div className="h-full w-full flex flex-col justify-between p-6 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 text-white relative overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:14px_14px] opacity-30" />
-                  <div className="relative z-10 flex items-center justify-between text-zinc-400">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">Hackways Event</span>
-                    <TicketIcon size={16} className="text-zinc-500" />
-                  </div>
-                  <div className="relative z-10 space-y-2">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/80 flex items-center justify-center font-bold text-sm text-white shadow-inner">
-                      {event.title.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="text-base font-bold font-heading line-clamp-2 leading-snug">
-                      {event.title}
-                    </div>
-                    <div className="text-xs text-zinc-400">
-                      {event.time_display || event.start_time || "Date to be announced"}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* 02. Event Description Section - Show ONLY if configured */}
-        {event.description && event.description.trim() && (
-          <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
-            <div className="space-y-4 max-w-4xl">
-              <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                About the Event
-              </h2>
-              <div className={`text-sm sm:text-base leading-relaxed whitespace-pre-line ${
-                isDarkTheme ? "text-zinc-300" : "text-zinc-700"
-              }`}>
-                {event.description}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 03. Schedule Section - Show ONLY if configured */}
-        {event.schedule && event.schedule.length > 0 && (
-          <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
-            <div className="space-y-6 max-w-4xl">
-              <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                Schedule
-              </h2>
-              <ol className="mt-4 space-y-0">
-                {event.schedule.map((item, idx) => (
-                  <li key={item.id || idx} className="relative grid grid-cols-[80px_minmax(0,1fr)] sm:grid-cols-[110px_minmax(0,1fr)] gap-4 pb-7 last:pb-0">
-                    {idx < event.schedule!.length - 1 && (
-                      <span className={`absolute left-[79px] sm:left-[109px] top-5 bottom-0 w-px ${isDarkTheme ? "bg-zinc-800" : "bg-zinc-200"}`} aria-hidden="true" />
-                    )}
-                    <span className={`text-xs sm:text-sm font-mono tabular-nums pt-0.5 shrink-0 ${isDarkTheme ? "text-zinc-400" : "text-zinc-500"}`}>
-                      {item.time}
-                    </span>
-                    <span className="min-w-0">
-                      <span className={`block text-sm sm:text-base font-semibold tracking-tight ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                        {item.title}
-                      </span>
-                      {item.description && (
-                        <span className={`block text-xs sm:text-sm leading-relaxed mt-1 ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
-                          {item.description}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </section>
-        )}
-
-        {/* 04. Location & Venue - Show ONLY if configured */}
-        {event.location && event.location.trim() && (
-          <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
-            <div className="space-y-5 max-w-4xl">
-              <div>
-                <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                  Location & Venue
-                </h2>
-                <p className={`text-xs sm:text-sm mt-1 ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
-                  {[event.location, event.city].filter(Boolean).join(", ")}
-                </p>
-              </div>
-
-              {!/^https?:\/\//i.test(event.location) && (
-                <div className={`overflow-hidden rounded-2xl border ${isDarkTheme ? "border-zinc-800" : "border-zinc-200"}`}>
-                  <iframe
-                    title={`Map of ${event.location}`}
-                    src={`https://www.google.com/maps?q=${encodeURIComponent([event.location, event.city].filter(Boolean).join(", "))}&output=embed`}
-                    className="w-full h-64 sm:h-80 border-0"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                </div>
-              )}
-
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.location, event.city].filter(Boolean).join(", "))}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold hover:underline ${
-                  isDarkTheme ? "text-zinc-300" : "text-zinc-800"
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-start">
+            {/* Mobile Poster (Adapts to acceptable 16:9 and 1:1 ratios) */}
+            <div className="block lg:hidden order-1">
+              <div
+                className={`${
+                  aspectRatio === "16/9" ? "aspect-16/9 max-w-lg" : "aspect-square max-w-xs"
+                } w-full mx-auto overflow-hidden rounded-2xl border shadow-lg ${
+                  isDarkTheme ? "bg-zinc-900 border-white/10" : "bg-zinc-100 border-zinc-200"
                 }`}
               >
-                Open in Google Maps <ArrowRightIcon size={13} className="-rotate-45" />
-              </a>
-            </div>
-          </section>
-        )}
-
-        {/* 05. FAQs Section - Show ONLY if configured */}
-        {event.faqs && event.faqs.length > 0 && (
-          <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
-            <div className="space-y-5 max-w-4xl">
-              <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                Frequently Asked Questions
-              </h2>
-              <div className={`mt-3 divide-y ${isDarkTheme ? "divide-zinc-800/80" : "divide-zinc-200"}`}>
-                {event.faqs.map((faq, idx) => (
-                  <details key={faq.id || idx} className="group py-4">
-                    <summary className={`flex items-center justify-between gap-4 cursor-pointer list-none text-sm sm:text-base font-semibold tracking-tight [&::-webkit-details-marker]:hidden ${
-                      isDarkTheme ? "text-zinc-200" : "text-zinc-900"
-                    }`}>
-                      <span>{faq.question}</span>
-                      <span className="shrink-0 transition-transform group-open:rotate-45 text-lg leading-none text-zinc-500" aria-hidden="true">+</span>
-                    </summary>
-                    <p className={`mt-2.5 text-xs sm:text-sm leading-relaxed whitespace-pre-line ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
-                      {faq.answer}
-                    </p>
-                  </details>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* 06. Partners & Sponsors - Show ONLY if configured */}
-        {event.partners && event.partners.length > 0 && (
-          <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
-            <div className="space-y-4 max-w-4xl">
-              <div className="text-xs sm:text-sm font-medium text-zinc-400">
-                {event.partner_label || "Partners & Sponsors"}
-              </div>
-              <div className="flex items-center gap-7 overflow-x-auto no-scrollbar py-1">
-                {event.partners.map((partner, idx) => {
-                  const isWordmark = partner.toLowerCase().includes("cursor");
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex items-center gap-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${
-                        isDarkTheme ? "text-zinc-300" : "text-zinc-700"
-                      }`}
-                    >
-                      <PartnerBrandMark name={partner} />
-                      {!isWordmark && <span>{partner}</span>}
+                {(event.square_banner_url || event.banner_url) ? (
+                  <img
+                    src={event.square_banner_url || event.banner_url}
+                    alt={event.title}
+                    className="h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <div className="h-full w-full flex flex-col justify-between p-5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 text-white relative overflow-hidden">
+                    <div className="flex items-center justify-between text-zinc-400">
+                      <span className="text-[10px] font-mono uppercase tracking-widest">Hackways</span>
+                      <TicketIcon size={14} className="text-zinc-500" />
                     </div>
-                  );
-                })}
+                    <div>
+                      <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-xs mb-2">
+                        {event.title.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="text-sm font-bold font-heading line-clamp-1">{event.title}</div>
+                      <div className="text-[11px] text-zinc-400 mt-0.5">{event.time_display || event.start_time || "Upcoming"}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Left Column: Event Information & Actions */}
+            <div className="lg:col-span-7 xl:col-span-6 space-y-7 order-2 lg:order-1">
+              <h1
+                className={`text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight font-heading leading-[1.08] ${
+                  isDarkTheme ? "text-white" : "text-zinc-950"
+                }`}
+              >
+                {event.title}
+              </h1>
+
+              {/* Action Button: Dedicated RSVP path navigation */}
+              <div className="flex items-center gap-3 pt-1">
+                {!event.tiers || event.tiers.length === 0 ? (
+                  <span
+                    className={`inline-flex items-center justify-center rounded-full h-11 px-7 text-xs font-semibold select-none ${
+                      isDarkTheme
+                        ? "bg-zinc-800 text-zinc-400 border border-zinc-700/60"
+                        : "bg-zinc-100 text-zinc-400 border border-zinc-200"
+                    }`}
+                  >
+                    Tickets coming soon
+                  </span>
+                ) : (
+                  <Link
+                    href={`/events/${id}/rsvp`}
+                    className={`inline-flex items-center justify-center gap-2 rounded-full h-11 px-7 text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
+                      isDarkTheme
+                        ? "bg-white text-zinc-950 shadow-md hover:bg-zinc-100"
+                        : "bg-zinc-950 text-white shadow-md hover:bg-zinc-800"
+                    }`}
+                  >
+                    <span>
+                      {existingRSVP && existingRSVP.status !== "CANCELLED"
+                        ? existingRSVP.status === "PENDING_APPROVAL"
+                          ? "Application Submitted"
+                          : existingRSVP.status === "WAITLIST"
+                          ? "Waitlist Status"
+                          : "My Ticket"
+                        : isSoldOut
+                        ? "Join Waitlist"
+                        : "RSVP Now"}
+                    </span>
+                    <ArrowRightIcon size={14} />
+                  </Link>
+                )}
+              </div>
+
+              {/* Event Metadata */}
+              <div
+                className={`pt-5 border-t space-y-3.5 text-xs sm:text-sm ${
+                  isDarkTheme ? "border-zinc-800/80 text-zinc-300" : "border-zinc-200 text-zinc-700"
+                }`}
+              >
+                {/* Date & Time */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isDarkTheme ? "bg-zinc-800/80 text-zinc-300 border border-zinc-700/40" : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                    }`}
+                  >
+                    <CalendarIcon size={15} />
+                  </div>
+                  <div>
+                    <span className={`font-semibold ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                      {event.time_display || event.start_time || "Date to be announced"}
+                    </span>
+                    {event.end_time && (
+                      <span className={isDarkTheme ? "text-zinc-400" : "text-zinc-500"}> — {event.end_time}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isDarkTheme ? "bg-zinc-800/80 text-zinc-300 border border-zinc-700/40" : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+                    }`}
+                  >
+                    <MapPinIcon size={15} />
+                  </div>
+                  <div>
+                    <span className={`font-semibold ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                      {event.location || "Venue announced after RSVP"}
+                    </span>
+                    {event.city && (
+                      <span className={isDarkTheme ? "text-zinc-400" : "text-zinc-500"}>, {event.city}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Channel / Host Attribution */}
+                {event.channel_name && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-zinc-700/50">
+                      {event.channel_avatar ? (
+                        <img
+                          src={event.channel_avatar}
+                          alt={event.channel_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div
+                          className={`w-full h-full flex items-center justify-center text-[10px] font-bold ${
+                            isDarkTheme ? "bg-zinc-800 text-zinc-200" : "bg-zinc-100 text-zinc-800"
+                          }`}
+                        >
+                          {event.channel_name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/channels/${event.channel_slug || event.channel_id}`}
+                        className={`font-semibold hover:underline ${
+                          isDarkTheme ? "text-white" : "text-zinc-950"
+                        }`}
+                      >
+                        {event.channel_name}
+                      </Link>
+                      <span className={`text-xs ${isDarkTheme ? "text-zinc-500" : "text-zinc-400"}`}>
+                        Host
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Desktop Poster (Adapts to 16:9 and 1:1 ratios with ambient depth) */}
+            <div className="hidden lg:block lg:col-span-5 xl:col-span-6 order-2">
+              <div className="relative group w-full">
+                {(event.banner_url || event.square_banner_url) && (
+                  <div
+                    className="absolute -inset-1 rounded-2xl opacity-25 blur-xl pointer-events-none transition duration-500 group-hover:opacity-40"
+                    style={{
+                      backgroundImage: `url(${event.banner_url || event.square_banner_url})`,
+                      backgroundSize: "cover",
+                    }}
+                    aria-hidden="true"
+                  />
+                )}
+                <div
+                  className={`${
+                    aspectRatio === "16/9" ? "aspect-16/9" : "aspect-square"
+                  } relative w-full overflow-hidden rounded-2xl border shadow-xl ${
+                    isDarkTheme ? "bg-zinc-900 border-white/10" : "bg-zinc-100 border-zinc-200"
+                  }`}
+                >
+                  {(event.banner_url || event.square_banner_url) ? (
+                    <img
+                      src={event.banner_url || event.square_banner_url}
+                      alt={event.title}
+                      className="h-full w-full object-cover object-center"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex flex-col justify-between p-8 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
+                      <div className="relative z-10 flex items-center justify-between text-zinc-400">
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">Hackways Event</span>
+                        <TicketIcon size={16} className="text-zinc-500" />
+                      </div>
+                      <div className="relative z-10 space-y-2">
+                        <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/80 flex items-center justify-center font-bold text-sm text-white shadow-inner">
+                          {event.title.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="text-base font-bold font-heading line-clamp-2 leading-snug">
+                          {event.title}
+                        </div>
+                        <div className="text-xs text-zinc-400">
+                          {event.time_display || event.start_time || "Date to be announced"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </section>
-        )}
 
-        {/* 07. Host Attribution & Contact - Show ONLY if configured */}
-        {((event.hosts && event.hosts.length > 0 && event.hosts.some((h) => h && h !== "Event Organizer")) || event.contact_email || event.contact_phone) && (
-          <section className={`pt-10 border-t space-y-5 max-w-4xl ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
-            {event.hosts && event.hosts.length > 0 && event.hosts.some((h) => h && h !== "Event Organizer") && (
-              <div>
-                <div className="text-xs sm:text-sm text-zinc-400 font-medium">Hosted by</div>
-                <div className={`text-base font-semibold mt-1 ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
-                  {event.hosts.filter((h) => h !== "Event Organizer").join(", ")}
+          {/* 02. Event Description Section - Show ONLY if configured */}
+          {event.description && event.description.trim() && (
+            <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
+              <div className="space-y-4 max-w-4xl">
+                <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                  About the Event
+                </h2>
+                <div className={`text-sm sm:text-base leading-relaxed whitespace-pre-line ${
+                  isDarkTheme ? "text-zinc-300" : "text-zinc-700"
+                }`}>
+                  {event.description}
                 </div>
               </div>
-            )}
+            </section>
+          )}
 
-            {(event.contact_email || event.contact_phone) && (
-              <div className="space-y-2.5 pt-2">
-                <div className="text-xs sm:text-sm text-zinc-400 font-medium">Questions? Contact the organizer</div>
-                <div className="flex flex-wrap items-center gap-3">
-                  {event.contact_email && (
-                    <a
-                      href={`mailto:${event.contact_email}`}
-                      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium border transition ${
-                        isDarkTheme
-                          ? "border-zinc-800 text-zinc-300 hover:bg-zinc-900"
-                          : "border-zinc-200 text-zinc-800 hover:bg-zinc-50"
-                      }`}
-                    >
-                      {event.contact_email}
-                    </a>
-                  )}
-                  {event.contact_phone && (
-                    <a
-                      href={`tel:${event.contact_phone.replace(/[^+\d]/g, "")}`}
-                      className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium border transition ${
-                        isDarkTheme
-                          ? "border-zinc-800 text-zinc-300 hover:bg-zinc-900"
-                          : "border-zinc-200 text-zinc-800 hover:bg-zinc-50"
-                      }`}
-                    >
-                      {event.contact_phone}
-                    </a>
-                  )}
+          {/* 03. Schedule Section - Show ONLY if configured */}
+          {event.schedule && event.schedule.length > 0 && (
+            <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
+              <div className="space-y-6 max-w-4xl">
+                <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                  Schedule
+                </h2>
+                <ol className="mt-4 space-y-0">
+                  {event.schedule.map((item, idx) => (
+                    <li key={item.id || idx} className="relative grid grid-cols-[80px_minmax(0,1fr)] sm:grid-cols-[110px_minmax(0,1fr)] gap-4 pb-7 last:pb-0">
+                      {idx < event.schedule!.length - 1 && (
+                        <span className={`absolute left-[79px] sm:left-[109px] top-5 bottom-0 w-px ${isDarkTheme ? "bg-zinc-800" : "bg-zinc-200"}`} aria-hidden="true" />
+                      )}
+                      <span className={`text-xs sm:text-sm font-mono tabular-nums pt-0.5 shrink-0 ${isDarkTheme ? "text-zinc-400" : "text-zinc-500"}`}>
+                        {item.time}
+                      </span>
+                      <span className="min-w-0">
+                        <span className={`block text-sm sm:text-base font-semibold tracking-tight ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                          {item.title}
+                        </span>
+                        {item.description && (
+                          <span className={`block text-xs sm:text-sm leading-relaxed mt-1 ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
+                            {item.description}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </section>
+          )}
+
+          {/* 04. Location & Venue - Show ONLY if configured */}
+          {event.location && event.location.trim() && (
+            <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
+              <div className="space-y-5 max-w-4xl">
+                <div>
+                  <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                    Location & Venue
+                  </h2>
+                  <p className={`text-xs sm:text-sm mt-1 ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
+                    {[event.location, event.city].filter(Boolean).join(", ")}
+                  </p>
+                </div>
+
+                {!/^https?:\/\//i.test(event.location) && (
+                  <div className={`overflow-hidden rounded-2xl border ${isDarkTheme ? "border-zinc-800" : "border-zinc-200"}`}>
+                    <iframe
+                      title={`Map of ${event.location}`}
+                      src={`https://www.google.com/maps?q=${encodeURIComponent([event.location, event.city].filter(Boolean).join(", "))}&output=embed`}
+                      className="w-full h-64 sm:h-80 border-0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+                )}
+
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.location, event.city].filter(Boolean).join(", "))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold hover:underline ${
+                    isDarkTheme ? "text-zinc-300" : "text-zinc-800"
+                  }`}
+                >
+                  Open in Google Maps <ArrowRightIcon size={13} className="-rotate-45" />
+                </a>
+              </div>
+            </section>
+          )}
+
+          {/* 05. FAQs Section - Show ONLY if configured */}
+          {event.faqs && event.faqs.length > 0 && (
+            <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
+              <div className="space-y-5 max-w-4xl">
+                <h2 className={`text-xl sm:text-2xl font-bold font-heading ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
+                  Frequently Asked Questions
+                </h2>
+                <div className={`mt-3 divide-y ${isDarkTheme ? "divide-zinc-800/80" : "divide-zinc-200"}`}>
+                  {event.faqs.map((faq, idx) => (
+                    <details key={faq.id || idx} className="group py-4">
+                      <summary className={`flex items-center justify-between gap-4 cursor-pointer list-none text-sm sm:text-base font-semibold tracking-tight [&::-webkit-details-marker]:hidden ${
+                        isDarkTheme ? "text-zinc-200" : "text-zinc-900"
+                      }`}>
+                        <span>{faq.question}</span>
+                        <span className="shrink-0 transition-transform group-open:rotate-45 text-lg leading-none text-zinc-500" aria-hidden="true">+</span>
+                      </summary>
+                      <p className={`mt-2.5 text-xs sm:text-sm leading-relaxed whitespace-pre-line ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
+                        {faq.answer}
+                      </p>
+                    </details>
+                  ))}
                 </div>
               </div>
-            )}
-          </section>
-        )}
+            </section>
+          )}
+
+          {/* 06. Partners & Sponsors - Show ONLY if configured */}
+          {event.partners && event.partners.length > 0 && (
+            <section className={`pt-10 border-t ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
+              <div className="space-y-4 max-w-4xl">
+                <div className="text-xs sm:text-sm font-medium text-zinc-400">
+                  {event.partner_label || "Partners & Sponsors"}
+                </div>
+                <div className="flex items-center gap-7 overflow-x-auto no-scrollbar py-1">
+                  {event.partners.map((partner, idx) => {
+                    const isWordmark = partner.toLowerCase().includes("cursor");
+                    return (
+                      <div
+                        key={idx}
+                        className={`flex items-center gap-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${
+                          isDarkTheme ? "text-zinc-300" : "text-zinc-700"
+                        }`}
+                      >
+                        <PartnerBrandMark name={partner} />
+                        {!isWordmark && <span>{partner}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* 07. Organizer Contact - Show ONLY if contact details exist */}
+          {(event.contact_email || event.contact_phone) && (
+            <section className={`pt-10 border-t space-y-4 max-w-4xl ${isDarkTheme ? "border-zinc-800/80" : "border-zinc-200"}`}>
+              <div className="text-xs sm:text-sm text-zinc-400 font-medium">Questions? Contact the organizer</div>
+              <div className="flex flex-wrap items-center gap-3">
+                {event.contact_email && (
+                  <a
+                    href={`mailto:${event.contact_email}`}
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium border transition ${
+                      isDarkTheme
+                        ? "border-zinc-800 text-zinc-300 hover:bg-zinc-900"
+                        : "border-zinc-200 text-zinc-800 hover:bg-zinc-50"
+                    }`}
+                  >
+                    {event.contact_email}
+                  </a>
+                )}
+                {event.contact_phone && (
+                  <a
+                    href={`tel:${event.contact_phone.replace(/[^+\d]/g, "")}`}
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-medium border transition ${
+                      isDarkTheme
+                        ? "border-zinc-800 text-zinc-300 hover:bg-zinc-900"
+                        : "border-zinc-200 text-zinc-800 hover:bg-zinc-50"
+                    }`}
+                  >
+                    {event.contact_phone}
+                  </a>
+                )}
+              </div>
+            </section>
+          )}
         </div>
 
         {/* 08. Clean Minimal Footer */}
