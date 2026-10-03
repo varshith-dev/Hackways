@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   Menu,
   X,
@@ -197,7 +198,7 @@ export default function MobileConsoleHeader({
             {/* Quick Actions Shortcuts */}
             <div className="p-3 border-t border-[#dedee2] bg-[#fafafa] space-y-1">
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 onClick={() => setDrawerOpen(false)}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-[#202022] hover:bg-[#f0f0f2] transition"
               >

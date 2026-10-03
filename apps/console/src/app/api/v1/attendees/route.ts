@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { serverStore, generateTicketCode } from "@/lib/serverStore";
 import { requireSession } from "@/lib/serverAuth";
+import { assertEventAccess, eventOwnerIds } from "@/lib/tenantAccess";
 
 export async function GET(req: Request) {
   const session = requireSession(req, ["organizer", "admin"]);
-  // Non-organizer/admin callers get an empty list instead of a 401.
+  // Non-organizer/admin callers (e.g. attendees browsing the site) get an empty
+  // list instead of a 401, so the UI sync in api.ts doesn't log a console error.
   if (session instanceof NextResponse) {
     return NextResponse.json({ attendees: [], count: 0 });
   }
@@ -12,7 +14,23 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get("eventId") || undefined;
-    const attendees = serverStore.getAttendees(eventId);
+
+    if (eventId) {
+      const deny = assertEventAccess(session, serverStore.getEventById(eventId));
+      if (deny) return deny;
+      const attendees = serverStore.getAttendees(eventId);
+      return NextResponse.json({ attendees, count: attendees.length });
+    }
+
+    // No eventId used to mean "every attendee on the platform" handed to any
+    // organizer — a full cross-tenant leak. Scope it to events the caller
+    // owns/hosts; only an admin (already gated to platform-wide dashboards
+    // like KPI/super-admin elsewhere) gets the unscoped view.
+    const attendees = session.role === "admin"
+      ? serverStore.getAttendees()
+      : serverStore.getEvents()
+          .filter((e) => eventOwnerIds(e).includes(session.sub))
+          .flatMap((e) => serverStore.getAttendees(e.id));
     return NextResponse.json({ attendees, count: attendees.length });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to fetch attendees" }, { status: 500 });

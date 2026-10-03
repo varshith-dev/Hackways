@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/app-shell/AppHeader";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import form from "@/components/forms/CreationForm.module.css";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function ConsoleStartPage() {
   const router = useRouter();
@@ -73,7 +74,7 @@ export default function ConsoleStartPage() {
             {isEnabling ? "Enabling…" : "Enable the console"}
             <ArrowRight size={15} />
           </button>
-          <Link href="/home" className={form.cancel}>
+          <Link href={webAppHref("/home")} className={form.cancel}>
             Not now
           </Link>
         </div>

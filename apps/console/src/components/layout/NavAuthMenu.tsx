@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { webAppHref } from "@/lib/webAppUrl";
 
 /** The landing page's own navbar is a server component (see page.tsx), so the
  * one piece of it that depends on auth state — Sign in vs. the account menu —
@@ -40,7 +41,7 @@ export default function NavAuthMenu() {
   if (!user) {
     return (
       <Link
-        href="/login"
+        href={webAppHref("/login")}
         className="hidden text-sm font-medium text-[#34349C] transition-opacity hover:opacity-70 lg:inline"
       >
         Sign in
@@ -70,7 +71,7 @@ export default function NavAuthMenu() {
           className="absolute right-0 top-full mt-2 w-44 overflow-hidden rounded-lg border border-line bg-white shadow-[0_8px_24px_-8px_rgba(20,20,24,.12)]"
         >
           <Link
-            href="/create"
+            href={webAppHref("/create")}
             onClick={() => setOpen(false)}
             className="flex items-center px-3.5 py-2.5 text-xs font-medium text-caviar transition hover:bg-floatie"
           >
@@ -86,7 +87,7 @@ export default function NavAuthMenu() {
             </Link>
           )}
           <Link
-            href="/settings/account"
+            href={webAppHref("/settings/account")}
             onClick={() => setOpen(false)}
             className="flex items-center px-3.5 py-2.5 text-xs font-medium text-caviar transition hover:bg-floatie"
           >

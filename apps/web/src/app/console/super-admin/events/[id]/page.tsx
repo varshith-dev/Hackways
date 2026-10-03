@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getStoredEvents, getEventAttendees, saveEvent, StoredAttendee } from "@/lib/api";
 import { EventItem } from "@/lib/types";
 import { useToast } from "@/components/ui/Toast";
+import { formatOrganizerDisplay } from "@/lib/userFormat";
 
 export default function EventAuditPage() {
   const params = useParams();
@@ -124,7 +125,7 @@ export default function EventAuditPage() {
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-zinc-500 flex-wrap">
-            <span>Organizer: <strong className="text-zinc-800">{eventItem.hosts?.[0] || eventItem.organizer_id}</strong></span>
+            <span>Organizer: <strong className="text-zinc-800">{formatOrganizerDisplay({ hostName: eventItem.hosts?.[0], channelName: eventItem.channel_name, username: eventItem.organizer_username, organizerId: eventItem.organizer_id })}</strong></span>
             <span>•</span>
             <span>Category: <strong className="text-zinc-800">{eventItem.category || "General"}</strong></span>
             <span>•</span>

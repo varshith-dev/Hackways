@@ -33,42 +33,30 @@ export function signSessionToken(claims: Omit<SessionClaims, "exp">, ttlSeconds 
   return `${payload}.${sign(payload)}`;
 }
 
+// Only ever accepts a real HMAC-signed token. A previous fallback here parsed
+// the raw cookie as plain JSON and trusted whatever `role`/`sub` it contained
+// with no signature check at all — a full auth bypass (anyone could set
+// `role: "admin"` directly). That path only ever existed to support the dead
+// client-side session writer in lib/auth.ts (setClientSession/getClientSession,
+// unused anywhere — the real flow is AuthProvider.tsx's httpOnly cookie) and
+// has been removed; nothing else ever depended on it.
 export function verifySessionToken(token: string | undefined | null): SessionClaims | null {
   if (!token) return null;
-
-  // 1. Try HMAC-signed format (payload.sig)
   const parts = token.split(".");
-  if (parts.length === 2) {
-    const [payload, sig] = parts;
-    const expected = Buffer.from(sign(payload));
-    const actual = Buffer.from(sig);
-    if (expected.length === actual.length && timingSafeEqual(expected, actual)) {
-      try {
-        const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as SessionClaims;
-        if (!claims.exp || Date.now() / 1000 <= claims.exp) return claims;
-      } catch {}
-    }
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
+
+  const expected = Buffer.from(sign(payload));
+  const actual = Buffer.from(sig);
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+    return null;
   }
 
-  // 2. Try JSON user session cookie (written by client auth.ts or cookie storage)
   try {
-    let unencoded = token;
-    if (unencoded.includes("%")) {
-      try {
-        unencoded = decodeURIComponent(unencoded);
-      } catch {}
-    }
-    const parsed = JSON.parse(unencoded);
-    if (parsed && (parsed.userId || parsed.sub || parsed.email)) {
-      return {
-        sub: parsed.sub || parsed.userId || "usr_organizer",
-        email: parsed.email || "organizer@hackways.me",
-        name: parsed.name || "Organizer",
-        role: (parsed.role as SessionRole) || "organizer",
-        exp: Math.floor(Date.now() / 1000) + 86400 * 7,
-      };
-    }
-  } catch {}
-
-  return null;
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as SessionClaims;
+    if (!claims.exp || Date.now() / 1000 > claims.exp) return null;
+    return claims;
+  } catch {
+    return null;
+  }
 }

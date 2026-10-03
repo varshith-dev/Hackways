@@ -1,11 +1,13 @@
 export type EventStatus = "DRAFT" | "PUBLISHED" | "SOLD_OUT" | "CANCELLED" | "DELETED";
-export type RSVPStatus = "CONFIRMED" | "WAITLIST" | "PENDING_APPROVAL" | "PENDING_CONFIRMATION" | "CANCELLED";
+export type RSVPStatus = "CONFIRMED" | "WAITLIST" | "PENDING_APPROVAL" | "PENDING_CONFIRMATION" | "CANCELLED" | "BLOCKED" | "CHECKED_IN" | "REFUNDED";
 export type TicketApprovalMode = "AUTO_APPROVE" | "REQUIRES_APPROVAL" | "OVERFLOW_WAITLIST";
 
 export interface UserSession {
   userId: string;
   email: string;
   name: string;
+  username?: string;
+  avatar?: string;
   role: "organizer" | "attendee" | "admin";
 }
 
@@ -110,6 +112,7 @@ export interface EventItem {
   title: string;
   description: string;
   organizer_id: string;
+  organizer_username?: string;
   organizer_type?: "USER" | "COMMUNITY";
   channel_id?: string;
   channel_name?: string;

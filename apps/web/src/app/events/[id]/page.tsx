@@ -25,5 +25,11 @@ export default async function EventDetailPage({
     } catch {}
   }
 
+  // Canonical slug redirect: Never promote raw UUID in user-facing URLs
+  if (initialEvent && initialEvent.slug && initialEvent.slug.toLowerCase() !== id.toLowerCase()) {
+    const { redirect } = await import("next/navigation");
+    redirect(`/events/${encodeURIComponent(initialEvent.slug)}`);
+  }
+
   return <EventDetailPageClient id={id} initialEvent={initialEvent} />;
 }

@@ -239,7 +239,7 @@ func (r *PostgresRepository) GetTiersByEvent(ctx context.Context, eventID string
 // 1. Attempts conditional decrement: UPDATE ticket_tiers SET remaining_capacity = remaining_capacity - 1 WHERE id = $1 AND remaining_capacity > 0 RETURNING remaining_capacity;
 // 2. If 0 rows returned, tier is sold out.
 // 3. Inserts RSVP record with UNIQUE(event_id, user_id) constraint.
-func (r *PostgresRepository) CreateRSVPAtomic(ctx context.Context, rsvp *domain.RSVP) (*domain.RSVP, int, error) {
+func (r *PostgresRepository) CreateRSVPAtomic(ctx context.Context, rsvp *domain.RSVP, force bool) (*domain.RSVP, int, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return nil, 0, err
@@ -247,12 +247,24 @@ func (r *PostgresRepository) CreateRSVPAtomic(ctx context.Context, rsvp *domain.
 	defer tx.Rollback(ctx)
 
 	var newRemaining int
-	err = tx.QueryRow(ctx, `
-		UPDATE ticket_tiers
-		SET remaining_capacity = remaining_capacity - 1,
-		    updated_at = NOW()
-		WHERE id = $1 AND remaining_capacity > 0
-		RETURNING remaining_capacity`, rsvp.TierID).Scan(&newRemaining)
+	if force {
+		// Paid tier, payment already captured: never reject here. GREATEST
+		// keeps remaining_capacity respecting its own CHECK (>= 0) constraint
+		// while still letting the INSERT below proceed even past zero.
+		err = tx.QueryRow(ctx, `
+			UPDATE ticket_tiers
+			SET remaining_capacity = GREATEST(remaining_capacity - 1, 0),
+			    updated_at = NOW()
+			WHERE id = $1
+			RETURNING remaining_capacity`, rsvp.TierID).Scan(&newRemaining)
+	} else {
+		err = tx.QueryRow(ctx, `
+			UPDATE ticket_tiers
+			SET remaining_capacity = remaining_capacity - 1,
+			    updated_at = NOW()
+			WHERE id = $1 AND remaining_capacity > 0
+			RETURNING remaining_capacity`, rsvp.TierID).Scan(&newRemaining)
+	}
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, 0, domain.ErrSoldOut

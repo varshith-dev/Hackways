@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 
+import SmoothScroll from "@/components/providers/SmoothScroll";
+
 const sansFont = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -38,7 +40,8 @@ export default function RootLayout({
       lang="en"
       className={`${sansFont.variable} ${monoFont.variable} h-full antialiased`}
     >
-      <body className="h-full flex flex-col bg-white font-sans text-caviar overflow-hidden">
+      <body className="h-full flex flex-col bg-white font-sans text-caviar">
+        <SmoothScroll />
         <AuthProvider>
           <ToastProvider>
             {children}

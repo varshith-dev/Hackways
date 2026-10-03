@@ -1,16 +1,38 @@
 import { NextResponse } from "next/server";
 import { serverStore } from "@/lib/serverStore";
 import { requireSession } from "@/lib/serverAuth";
+import { assertEventAccess, eventOwnerIds } from "@/lib/tenantAccess";
 
 export async function GET(req: Request) {
   const session = requireSession(req, ["organizer", "admin"]);
   if (session instanceof NextResponse) return session;
 
   try {
-    const events = serverStore.getEvents();
-    const attendees = serverStore.getAttendees();
-    const orders = serverStore.getOrders();
+    const { searchParams } = new URL(req.url);
+    const eventId = searchParams.get("eventId") || undefined;
+
+    let events = serverStore.getEvents();
+    let attendees = serverStore.getAttendees();
+    let orders = serverStore.getOrders();
     const users = serverStore.getUsers();
+
+    if (eventId) {
+      // Single-event view: must own/host it, admin included.
+      const deny = assertEventAccess(session, serverStore.getEventById(eventId));
+      if (deny) return deny;
+      events = events.filter((e) => e.id === eventId);
+      attendees = serverStore.getAttendees(eventId);
+      orders = serverStore.getOrders(eventId);
+    } else if (session.role !== "admin") {
+      // No eventId used to mean the whole platform's revenue/orders/attendees,
+      // handed to any organizer — the worst of the IDOR gaps. Scope to the
+      // caller's own events; only admin keeps the platform-wide rollup.
+      const ownEvents = events.filter((e) => eventOwnerIds(e).includes(session.sub));
+      const ownEventIds = new Set(ownEvents.map((e) => e.id));
+      events = ownEvents;
+      attendees = attendees.filter((a) => ownEventIds.has(a.eventId));
+      orders = orders.filter((o) => ownEventIds.has(o.eventId));
+    }
 
     const grossRevenue = orders.reduce((sum, o) => sum + (o.amount || (o as any).totalAmount || 0), 0);
     const platformFee = Math.round(grossRevenue * 0.05);

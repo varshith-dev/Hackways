@@ -65,12 +65,21 @@ func (s *RSVPService) CreateRSVP(ctx context.Context, req *domain.CreateRSVPRequ
 	if err != nil {
 		return nil, err
 	}
+	// Paid tiers: the payment is already captured by the time this is
+	// called (verified upstream in Next.js before this proxy call), so a
+	// paid registration must never land on the waitlist or require
+	// approval — see CLAUDE_MESSAGES.md Message #1. Capacity is clamped
+	// at 0 instead of rejected (CreateRSVPAtomic's force param).
+	isPaid := tier.PriceCents > 0
 
 	// 3. Fast-Path Ingress: Valkey Lua Atomic Reservation
 	reservation, err := s.cache.ReserveSeat(ctx, req.TierID, req.UserID, req.EventID, tier.RemainingCapacity)
 	if err != nil {
 		log.Printf("[RSVPService] Valkey check error (proceeding to Postgres): %v", err)
 		reservation.Status = "CONFIRMED" // Fallback to DB ACID on cache failure
+	}
+	if isPaid && reservation.Status == "WAITLIST" {
+		reservation.Status = "CONFIRMED"
 	}
 
 	if reservation.Status == "ALREADY_RSVPD" {
@@ -98,7 +107,7 @@ func (s *RSVPService) CreateRSVP(ctx context.Context, req *domain.CreateRSVPRequ
 			IdempotencyKey: req.IdempotencyKey,
 		}
 
-		confirmedRSVP, remainingCap, err := s.repo.CreateRSVPAtomic(ctx, rsvp)
+		confirmedRSVP, remainingCap, err := s.repo.CreateRSVPAtomic(ctx, rsvp, isPaid)
 		if err == nil {
 			// Seat successfully booked in Postgres!
 			finalResp = &domain.RSVPResponse{

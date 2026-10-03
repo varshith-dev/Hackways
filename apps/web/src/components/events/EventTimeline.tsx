@@ -56,11 +56,11 @@ export function EventTimeline({ events, savedIds, onSave, details = {}, reverse 
                   <div className={styles.cardBody}>
                     <div className={styles.details}>
                       <p className={styles.time}>{date ? <time dateTime={event.start_time}>{eventTime(event.start_time)}</time> : event.time_display || "Time to be announced"}</p>
-                      <h3 className={styles.title}><Link className={styles.stretched} href={`/events/${event.id}`}>{event.title}</Link></h3>
+                      <h3 className={styles.title}><Link className={styles.stretched} href={`/events/${encodeURIComponent(event.slug || event.id)}`}>{event.title}</Link></h3>
                       {host && <p className={styles.meta}><Users size={14} aria-hidden="true" />By {host}</p>}
                       <p className={styles.meta}><MapPin size={14} aria-hidden="true" />{[event.location, event.city && event.city !== event.location ? event.city : undefined].filter(Boolean).join(", ") || "Location to be announced"}</p>
                     </div>
-                    <Link href={`/events/${event.id}`} aria-label={`View ${event.title}`} tabIndex={-1}><EventArtwork event={event} /></Link>
+                    <Link href={`/events/${encodeURIComponent(event.slug || event.id)}`} aria-label={`View ${event.title}`} tabIndex={-1}><EventArtwork event={event} /></Link>
                   </div>
                   <div className={styles.cardFooter}>
                     <span className={styles.status} data-tone={detail?.tone}>{detail?.label || eventPrice(event)}</span>

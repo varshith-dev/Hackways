@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
-import { CheckCircleIcon } from "@/components/icons/hugeicons";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { CheckCircleIcon, XIcon } from "@/components/icons/hugeicons";
 
 interface ToastContextType {
   showToast: (message: string) => void;
@@ -15,14 +15,35 @@ export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissToast = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setToastMessage(null);
+  }, []);
 
   const showToast = useCallback((message: string) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
     setToastMessage(message);
-    const timer = setTimeout(() => {
-      setToastMessage((curr) => (curr === message ? null : curr));
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setToastMessage(null);
     }, 3200);
-    return () => clearTimeout(timer);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    },
+    []
+  );
 
   return (
     <ToastContext.Provider value={{ showToast }}>
@@ -32,11 +53,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <CheckCircleIcon size={15} className="text-emerald-400 shrink-0" />
           <span className="tracking-tight">{toastMessage}</span>
           <button
-            onClick={() => setToastMessage(null)}
-            className="ml-2 text-zinc-400 hover:text-white p-0.5 text-[11px] transition-colors"
-            aria-label="Dismiss"
+            type="button"
+            onClick={dismissToast}
+            className="ml-1.5 -mr-1 flex h-5 w-5 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-100 cursor-pointer"
+            aria-label="Dismiss notification"
           >
-            ✕
+            <XIcon size={12} />
           </button>
         </div>
       )}

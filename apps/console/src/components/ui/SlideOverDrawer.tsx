@@ -43,6 +43,42 @@ export function SlideOverDrawer({
     };
   }, [isOpen, onClose]);
 
+  // Focus management: move focus into the panel on open, trap Tab within it,
+  // and restore focus to the triggering element on close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const node = drawerRef.current;
+    if (!node) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    node.focus();
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = node.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    node.addEventListener("keydown", handleTabKey);
+    return () => {
+      node.removeEventListener("keydown", handleTabKey);
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const widthClass = {
@@ -64,7 +100,8 @@ export function SlideOverDrawer({
       {/* Slide-over Right Panel */}
       <div
         ref={drawerRef}
-        className={`relative z-10 w-full ${widthClass} bg-white h-full shadow-2xl flex flex-col border-l border-zinc-200 transition-transform duration-250 ease-out animate-in slide-in-from-right`}
+        tabIndex={-1}
+        className={`relative z-10 w-full ${widthClass} bg-white h-full shadow-2xl flex flex-col border-l border-zinc-200 outline-none transition-transform duration-250 ease-out animate-in slide-in-from-right`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

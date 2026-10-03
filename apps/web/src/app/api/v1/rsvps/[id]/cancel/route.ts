@@ -44,19 +44,20 @@ export async function POST(
     return NextResponse.json({ error: "You don't have permission to cancel this RSVP" }, { status: 403 });
   }
 
-  const success = serverStore.cancelAttendee(rsvpId);
+  const success = serverStore.requestAttendeeCancellation(rsvpId, body?.reason);
   if (!success) {
     return NextResponse.json({ error: "RSVP not found or already cancelled" }, { status: 404 });
   }
 
   return NextResponse.json({
-    message: "RSVP successfully cancelled; spot released",
+    message: "Cancellation request submitted. Your pass is blocked pending event host decision.",
     rsvp: {
       id: attendee.id,
       event_id: attendee.eventId,
       user_name: attendee.name,
       user_email: attendee.email,
-      status: "CANCELLED",
+      status: "BLOCKED",
+      cancellation_requested: true,
     },
   });
 }

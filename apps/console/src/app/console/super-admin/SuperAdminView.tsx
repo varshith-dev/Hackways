@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import DashboardArtwork, { DashboardArtworkKind } from "@/components/ui/DashboardArtwork";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import { formatOrganizerDisplay } from "@/lib/userFormat";
 import {
   Ticket,
   Building2,
@@ -45,6 +46,7 @@ import {
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import { CONSOLE_MODULES, type PlatformSettings } from "@/lib/platformSettings";
 import type { SessionRole } from "@/lib/sessionToken";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   MOCK_ADMIN_EVENTS,
   MOCK_ADMIN_ORGANIZERS,
@@ -244,7 +246,12 @@ export default function SuperAdminView({ activeTab }: { activeTab: SuperAdminTab
         return {
           id: ev.id,
           title: ev.title,
-          organizer: ev.hosts?.[0] || ev.organizer_id || "Platform Host",
+          organizer: formatOrganizerDisplay({
+            hostName: ev.hosts?.[0],
+            channelName: ev.channel_name,
+            username: ev.organizer_username,
+            organizerId: ev.organizer_id,
+          }),
           date: ev.start_time || "Upcoming",
           status: ev.deleted_by_organizer || ev.status === "DELETED" ? "DELETED" : (ev.status || "PUBLISHED"),
           category: ev.category || "General",
@@ -607,7 +614,7 @@ export default function SuperAdminView({ activeTab }: { activeTab: SuperAdminTab
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 className="text-xs font-medium bg-zinc-950 text-white px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition inline-flex items-center gap-1.5 shadow-2xs"
               >
                 <Plus size={13} />
@@ -644,7 +651,7 @@ export default function SuperAdminView({ activeTab }: { activeTab: SuperAdminTab
                     description="There are no live drops, scheduled keynotes, or events created yet."
                     action={
                       <Link
-                        href="/create"
+                        href={webAppHref("/create")}
                         className="inline-flex items-center gap-1.5 text-xs font-semibold bg-zinc-950 text-white px-4 py-2 rounded-lg hover:bg-zinc-800 transition shadow-2xs"
                       >
                         <Plus size={14} />
@@ -826,7 +833,7 @@ export default function SuperAdminView({ activeTab }: { activeTab: SuperAdminTab
                     description="User accounts and attendee rosters will automatically populate here as tickets are claimed."
                     action={
                       <Link
-                        href="/home"
+                        href={webAppHref("/home")}
                         className="inline-flex items-center gap-1.5 text-xs font-semibold border border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 px-4 py-2 rounded-lg transition shadow-2xs"
                       >
                         <span>Explore Events</span>

@@ -1,5 +1,13 @@
 # Repository Rules & Design Guidelines
 
+## Inter-Agent Communication Bus (STRICT PROTOCOL)
+- **Primary Messaging Channel**: Check [`AGENT_MESSAGING.md`](./AGENT_MESSAGING.md) (and [`CLAUDE_MESSAGES.md`](./CLAUDE_MESSAGES.md)) at the start of every session/turn.
+- Antigravity, Claude Code, and GitHub Copilot (Kimi K3 High) communicate and coordinate progress, schema changes, and file locks through [`AGENT_MESSAGING.md`](./AGENT_MESSAGING.md).
+- **Frequent Heartbeats & Live Progress Logging**:
+  - You MUST update and write into `AGENT_MESSAGING.md` continuously as you work (every few steps or whenever starting/finishing a file change or command).
+  - Log your active thoughts, file edits, git status, and next actions so Antigravity and Copilot have real-time visibility into your work.
+  - Never do multi-file refactors in silence without updating `AGENT_MESSAGING.md`.
+
 ## Event Banners & Posters Rule (STRICT MANDATORY REQUIREMENT)
 - **MUST KEEP 2 BANNERS FOR EVERY EVENT: 1:1 AND 16:9**
   1. **16:9 Landscape Banner (`banner_url`)**:

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo3D from "@/components/ui/Logo3D";
+import { useAuth } from "@/components/auth/AuthProvider";
 import DashboardArtwork, { DashboardArtworkKind } from "@/components/ui/DashboardArtwork";
 import { MetricCard } from "./components/MetricCard";
 import {
@@ -19,6 +20,7 @@ import {
   ProgressMeter,
 } from "./components/AnalyticsCharts";
 import { generateAnalyticsData, AnalyticsFilterState } from "./data/analyticsData";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   BarChartIcon,
   TicketIcon,
@@ -875,6 +877,7 @@ function EmptyKpiState({
 export default function KpiAnalyticsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const tabParam = searchParams.get("tab") as AnalyticsModule | null;
   const subTabParam = searchParams.get("subtab");
@@ -975,10 +978,10 @@ export default function KpiAnalyticsView() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/console/organizer/overview"
+            href={user?.role === "admin" ? "/console/super-admin/overview" : "/console/organizer/overview"}
             className="text-xs font-medium text-zinc-700 hover:text-zinc-950 px-4 py-1.5 rounded-full border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
-            <span>Exit to Console</span>
+            <span>{user?.role === "admin" ? "Back to Super Admin" : "Back to Organizer"}</span>
             <ArrowUpRight size={13} />
           </Link>
         </div>
@@ -1216,7 +1219,7 @@ export default function KpiAnalyticsView() {
               description="Platform GMV, ticket registrations, door scans, and financial settlements calculate dynamically in real time once events are scheduled and tickets are issued."
               action={
                 <Link
-                  href="/create"
+                  href={webAppHref("/create")}
                   className="px-5 py-2.5 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition inline-flex items-center gap-2 shadow-xs cursor-pointer"
                 >
                   <Plus size={13} />

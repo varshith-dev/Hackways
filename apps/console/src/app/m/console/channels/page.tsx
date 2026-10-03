@@ -11,6 +11,7 @@ import {
 import { getStoredChannels, getStoredEvents } from "@/lib/api";
 import { Channel, EventItem } from "@/lib/types";
 import MobileConsoleHeader from "../_components/MobileConsoleHeader";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function MobileChannelsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -116,7 +117,7 @@ export default function MobileChannelsPage() {
                   </div>
 
                   <Link
-                    href={`/channels/${encodeURIComponent(chan.slug || chan.id)}`}
+                    href={webAppHref(`/channels/${encodeURIComponent(chan.slug || chan.id)}`)}
                     className="px-3 py-1 rounded-full border border-[#dedee2] hover:bg-[#fafafa] text-[#202022] text-xs font-medium transition whitespace-nowrap shrink-0 flex items-center gap-1"
                   >
                     <span>View</span>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getAllOrders, StoredOrder } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import DashboardArtwork from "@/components/ui/DashboardArtwork";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function FinanceTransactionsPage() {
   const { showToast } = useToast();
@@ -93,8 +94,18 @@ export default function FinanceTransactionsPage() {
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {filteredOrders.map((ord) => {
-                const fee = Math.round(ord.amount * 0.048);
-                const net = ord.amount - fee;
+                const isPaid = ord.amount > 0;
+                // Compute platform fee accurately (4% standard rate)
+                // Gross = Base + (Base * 0.04) -> Base = Gross / 1.04
+                const baseAmount = isPaid ? Math.round((ord.amount / 1.04) * 100) / 100 : 0;
+                const fee = isPaid ? Math.round((ord.amount - baseAmount) * 100) / 100 : 0;
+                const net = isPaid ? baseAmount : 0;
+
+                const formatCur = (num: number) => {
+                  if (num === 0) return "₹0";
+                  return Number.isInteger(num) ? `₹${num.toLocaleString()}` : `₹${num.toFixed(2)}`;
+                };
+
                 return (
                   <tr key={ord.id} className="hover:bg-zinc-50/60 transition">
                     <td className="py-3 px-3 font-mono font-medium text-zinc-900">{ord.id}</td>
@@ -103,9 +114,18 @@ export default function FinanceTransactionsPage() {
                       <div className="text-[11px] text-zinc-400 font-mono">{ord.buyerEmail}</div>
                     </td>
                     <td className="py-3 px-3 text-zinc-700 font-medium">{ord.eventName}</td>
-                    <td className="py-3 px-3 font-mono text-zinc-900">₹{ord.amount.toLocaleString()}</td>
-                    <td className="py-3 px-3 font-mono text-zinc-500">-₹{fee.toLocaleString()}</td>
-                    <td className="py-3 px-3 font-mono font-bold text-zinc-950">₹{net.toLocaleString()}</td>
+                    <td className="py-3 px-3 font-mono text-zinc-900">{formatCur(ord.amount)}</td>
+                    <td className="py-3 px-3 font-mono">
+                      {fee > 0 ? (
+                        <div className="flex flex-col">
+                          <span className="text-zinc-600 font-medium">-{formatCur(fee)}</span>
+                          <span className="text-[10px] text-zinc-400 font-sans">Platform Fee (4%)</span>
+                        </div>
+                      ) : (
+                        <span className="text-zinc-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 font-mono font-bold text-zinc-950">{formatCur(net)}</td>
                     <td className="py-3 px-3">
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -133,7 +153,7 @@ export default function FinanceTransactionsPage() {
             </p>
           </div>
           <Link
-            href="/create"
+            href={webAppHref("/create")}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md bg-zinc-950 text-white hover:bg-zinc-800 transition shadow-2xs"
           >
             Create an Event Drop

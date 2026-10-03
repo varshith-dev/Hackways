@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import Logo3D from "@/components/ui/Logo3D";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   getManagedUserById,
   ManagedUser,
@@ -709,7 +710,7 @@ export default function UserDetailView() {
                       <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
                         <span>{new Date(ev.date).toLocaleDateString()}</span>
                         <Link
-                          href={`/events/${ev.eventId}`}
+                          href={webAppHref(`/events/${ev.eventId}`)}
                           target="_blank"
                           className="text-zinc-700 hover:text-zinc-950 font-medium inline-flex items-center gap-1"
                         >
@@ -771,7 +772,7 @@ export default function UserDetailView() {
                         <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
                           <span className="font-mono text-zinc-600">{ev.ticketCode}</span>
                           <Link
-                            href={`/events/${ev.eventId}`}
+                            href={webAppHref(`/events/${ev.eventId}`)}
                             target="_blank"
                             className="text-zinc-700 hover:text-zinc-950 font-medium inline-flex items-center gap-1"
                           >

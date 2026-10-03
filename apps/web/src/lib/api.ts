@@ -92,6 +92,7 @@ export interface UserTicket {
   id: string;
   ticket_code: string;
   event_id: string;
+  event_slug?: string;
   event_title: string;
   event_banner?: string; // 16:9
   event_square_banner?: string; // 1:1
@@ -105,7 +106,10 @@ export interface UserTicket {
   user_name: string;
   user_email: string;
   price_cents: number;
-  status: "CONFIRMED" | "CHECKED_IN" | "WAITLIST" | "PENDING_APPROVAL" | "CANCELLED";
+  status: "CONFIRMED" | "CHECKED_IN" | "WAITLIST" | "PENDING_APPROVAL" | "CANCELLED" | "BLOCKED";
+  cancellation_requested?: boolean;
+  cancellation_requested_at?: string;
+  cancel_reason?: string;
   checked_in_at?: string;
   created_at: string;
 }
@@ -120,7 +124,9 @@ export interface StoredAttendee {
   tierId: string;
   ticketCode: string;
   priceFormatted: string;
-  status: "CONFIRMED" | "CHECKED_IN" | "REFUNDED" | "WAITLIST" | "PENDING_APPROVAL" | "REJECTED" | "CANCELLED";
+  status: "CONFIRMED" | "CHECKED_IN" | "REFUNDED" | "WAITLIST" | "PENDING_APPROVAL" | "REJECTED" | "CANCELLED" | "BLOCKED";
+  cancellationRequested?: boolean;
+  cancellationRequestedAt?: string;
   approvalMode?: "AUTO_APPROVE" | "REQUIRES_APPROVAL" | "OVERFLOW_WAITLIST";
   answers?: Record<string, string | string[]>;
   checkedInAt?: string;
@@ -601,18 +607,31 @@ export async function createRSVP(eventId: string, payload: {
   const ev = eventIdx >= 0 ? events[eventIdx] : null;
 
   const tier = ev?.tiers.find((t) => t.id === payload.tier_id) || ev?.tiers[0];
-  const approvalMode = tier?.approval_mode || "AUTO_APPROVE";
+  const isPaidTicket = Boolean(
+    (tier?.price_cents && tier.price_cents > 0) ||
+    (payload.answers as any)?.razorpay_payment_id ||
+    (payload.answers as any)?.payment_status === "PAID" ||
+    (payload.answers as any)?.platform_fee_cents
+  );
+
+  const approvalMode = isPaidTicket ? "AUTO_APPROVE" : (tier?.approval_mode || "AUTO_APPROVE");
   const isOvercrowd = tier ? tier.remaining_capacity <= 0 : false;
 
   let rsvpStatus: "CONFIRMED" | "WAITLIST" | "PENDING_APPROVAL" = "CONFIRMED";
   let statusMessage = "RSVP confirmed successfully";
   let waitlistPosition: number | undefined = undefined;
 
-  if (approvalMode === "REQUIRES_APPROVAL") {
+  if (isPaidTicket) {
+    // STRICT RULE: Paid events/tickets on successful transaction ALWAYS auto-approve!
+    // There is no concept of waitlist or require approval for paid tickets.
+    rsvpStatus = "CONFIRMED";
+    statusMessage = "Payment successful! Your admission pass is confirmed.";
+    waitlistPosition = undefined;
+  } else if (approvalMode === "REQUIRES_APPROVAL") {
     // Requires approval: Host will review and approve
     rsvpStatus = "PENDING_APPROVAL";
     statusMessage = "Application submitted! Pending organizer review & approval.";
-  } else if (isOvercrowd || approvalMode === "OVERFLOW_WAITLIST" && isOvercrowd) {
+  } else if (isOvercrowd || (approvalMode === "OVERFLOW_WAITLIST" && isOvercrowd)) {
     // Overcrowd will be joining waitlist
     rsvpStatus = "WAITLIST";
     statusMessage = "Tier is at capacity. You have joined the waitlist.";
@@ -1547,9 +1566,24 @@ export function getExistingRSVP(eventId: string, userEmail?: string, userId?: st
       sequenceNo = idx >= 0 ? idx + 1 : attendees.findIndex((a) => a.id === foundAttendee?.id) + 1;
     }
 
-    const rawStatus = foundAttendee?.status || foundTicket?.status || "CONFIRMED";
+    let rawStatus = foundAttendee?.status || foundTicket?.status || "CONFIRMED";
     if (rawStatus === "CANCELLED" || rawStatus === "REFUNDED") {
       return null;
+    }
+
+    // MANDATORY RULE: Paid events/tickets are ALWAYS CONFIRMED (auto-approved on transaction)
+    const isPaidRegistration = Boolean(
+      (foundAttendee?.priceFormatted && foundAttendee.priceFormatted !== "₹0") ||
+      (foundTicket as any)?.is_paid ||
+      (foundTicket?.price_cents ? foundTicket.price_cents > 0 : false) ||
+      (foundAttendee?.answers as any)?.razorpay_payment_id ||
+      (foundAttendee?.answers as any)?.payment_status === "PAID" ||
+      (foundAttendee?.answers as any)?.platform_fee_cents
+    );
+    if (isPaidRegistration && rawStatus !== "CHECKED_IN") {
+      rawStatus = "CONFIRMED";
+      if (foundAttendee) foundAttendee.status = "CONFIRMED";
+      if (foundTicket) foundTicket.status = "CONFIRMED";
     }
     return {
       status: rawStatus as any,

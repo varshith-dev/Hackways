@@ -15,9 +15,13 @@ type Repository interface {
 	GetTiersByEvent(ctx context.Context, eventID string) ([]*domain.TicketTier, error)
 
 	// CreateRSVPAtomic attempts to atomically decrement remaining_capacity on the tier.
-	// If remaining_capacity == 0, returns domain.ErrSoldOut without inserting.
+	// If remaining_capacity == 0, returns domain.ErrSoldOut without inserting —
+	// unless force is true (paid tiers only: the payment is already captured
+	// by the time this is called, so capacity is clamped at 0 instead of
+	// rejecting, trading a rare oversold seat for never waitlisting someone
+	// who already paid).
 	// If user already RSVP'd, returns domain.ErrAlreadyRSVPd.
-	CreateRSVPAtomic(ctx context.Context, rsvp *domain.RSVP) (*domain.RSVP, int, error)
+	CreateRSVPAtomic(ctx context.Context, rsvp *domain.RSVP, force bool) (*domain.RSVP, int, error)
 
 	// CreateWaitlistEntry creates a waitlisted RSVP and assigns the next FIFO position.
 	CreateWaitlistEntry(ctx context.Context, rsvp *domain.RSVP) (*domain.WaitlistEntry, error)

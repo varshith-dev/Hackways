@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useToast } from "@/components/ui/Toast";
 import {
   BarChartIcon,
   TicketIcon,
@@ -35,6 +36,7 @@ import {
 
 export default function TeamView({ currentTab }: { currentTab: string }) {
   const { user } = useAuth();
+  const { showToast } = useToast();
   // Local state for interactive features
   const [tasks, setTasks] = useState(MOCK_CO_ORGANIZER_TASKS);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -949,8 +951,8 @@ export default function TeamView({ currentTab }: { currentTab: string }) {
               </p>
             </div>
             <button
-              onClick={() => alert("Attendance summary CSV generated and exported.")}
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-semibold hover:bg-zinc-800 transition"
+              onClick={() => showToast("Attendance summary CSV generated and exported.")}
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-semibold hover:bg-zinc-800 transition cursor-pointer"
             >
               Export Attendance CSV
             </button>

@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getEvent, getEventSync } from "@/lib/api";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   EVENT_CONSOLE_MODULES, eventConsoleHref, type EventConsoleTab,
 } from "@/lib/eventConsoleNavigation";
@@ -129,7 +130,7 @@ export default function MobileEventShell({
         </div>
         <Link
           className="mobile-console-icon-button"
-          href={`/events/${encodeURIComponent(event?.slug || eventId)}`}
+          href={webAppHref(`/events/${encodeURIComponent(event?.slug || eventId)}`)}
           aria-label="View public event"
         >
           <ExternalLink size={19} aria-hidden="true" />
@@ -186,11 +187,11 @@ export default function MobileEventShell({
           })}
         </nav>
         <div className="mobile-event-drawer-footer">
-          <Link href="/my-events" onClick={closeMenu}>
+          <Link href={webAppHref("/my-events")} onClick={closeMenu}>
             <ArrowLeft size={19} aria-hidden="true" />
             My events
           </Link>
-          <Link href={`/events/${encodeURIComponent(event?.slug || eventId)}`} onClick={closeMenu}>
+          <Link href={webAppHref(`/events/${encodeURIComponent(event?.slug || eventId)}`)} onClick={closeMenu}>
             <ExternalLink size={19} aria-hidden="true" />
             View public event
           </Link>

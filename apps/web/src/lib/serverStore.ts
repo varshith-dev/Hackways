@@ -14,11 +14,13 @@ export function generateTicketCode(): string {
 import type { StoredAttendee, StoredOrder } from "./api";
 import { cleanEventArtwork, cleanSeededChannels } from "./demoCleanup";
 import { defaultPlatformSettings, type PlatformSettings } from "./platformSettings";
+import { generateAutoUsername } from "./userFormat";
 
 export interface ServerUserRecord {
   id: string;
   name: string;
   email: string;
+  username?: string;
   phone?: string;
   avatar?: string;
   accountStatus: "ACTIVE" | "INACTIVE" | "SUSPENDED" | "BANNED" | "NEW" | "DELETED";
@@ -320,6 +322,10 @@ export const serverStore = {
     return getState().teams.find((t) => t.event_id === eventId && t.code.toUpperCase() === clean) || null;
   },
 
+  getTeamById(id: string): EventTeam | null {
+    return getState().teams.find((t) => t.id === id) || null;
+  },
+
   saveTeam(team: EventTeam): EventTeam {
     const state = getState();
     const idx = state.teams.findIndex((t) => t.id === team.id || (t.event_id === team.event_id && t.code.toUpperCase() === team.code.toUpperCase()));
@@ -409,11 +415,49 @@ export const serverStore = {
     return { success: true, attendee, message: "Check-in verified successfully." };
   },
 
-  cancelAttendee(attendeeId: string): boolean {
+  cancelAttendee(attendeeId: string, reason?: string, cancelledByAttendee: boolean = false): boolean {
     const state = getState();
     const attendee = state.attendees.find((a) => a.id === attendeeId);
     if (attendee) {
       attendee.status = "CANCELLED";
+      attendee.cancelledAt = new Date().toISOString();
+      attendee.cancelReason = reason || (cancelledByAttendee ? "Cancelled by attendee" : "Cancelled by event host");
+      attendee.cancellationRequested = false;
+      const ev = state.events.find((e) => e.id === attendee.eventId);
+      if (ev) {
+        const tier = ev.tiers.find((t) => t.id === attendee.tierId || t.name === attendee.tierName);
+        if (tier) {
+          tier.remaining_capacity = Math.min(tier.total_capacity, (tier.remaining_capacity ?? 0) + 1);
+        }
+        ev.attendee_count = Math.max(0, (ev.attendee_count || 1) - 1);
+      }
+      saveToDisk();
+      return true;
+    }
+    return false;
+  },
+
+  requestAttendeeCancellation(attendeeId: string, reason?: string): boolean {
+    const state = getState();
+    const attendee = state.attendees.find((a) => a.id === attendeeId);
+    if (attendee) {
+      attendee.status = "BLOCKED";
+      attendee.cancellationRequested = true;
+      attendee.cancellationRequestedAt = new Date().toISOString();
+      attendee.cancelReason = reason || "Cancellation requested by attendee";
+      // Spot remains blocked and held until host makes a decision
+      saveToDisk();
+      return true;
+    }
+    return false;
+  },
+
+  approveAttendeeCancellation(attendeeId: string): boolean {
+    const state = getState();
+    const attendee = state.attendees.find((a) => a.id === attendeeId);
+    if (attendee) {
+      attendee.status = "CANCELLED";
+      attendee.cancellationRequested = false;
       attendee.cancelledAt = new Date().toISOString();
       const ev = state.events.find((e) => e.id === attendee.eventId);
       if (ev) {
@@ -423,6 +467,19 @@ export const serverStore = {
         }
         ev.attendee_count = Math.max(0, (ev.attendee_count || 1) - 1);
       }
+      saveToDisk();
+      return true;
+    }
+    return false;
+  },
+
+  declineAttendeeCancellation(attendeeId: string): boolean {
+    const state = getState();
+    const attendee = state.attendees.find((a) => a.id === attendeeId);
+    if (attendee) {
+      attendee.status = "CONFIRMED";
+      attendee.cancellationRequested = false;
+      attendee.cancelReason = undefined;
       saveToDisk();
       return true;
     }
@@ -512,11 +569,27 @@ export const serverStore = {
   },
 
   getUserById(id: string): ServerUserRecord | null {
-    return getState().users.find((u) => u.id === id || u.email.toLowerCase() === id.toLowerCase()) || null;
+    const user = getState().users.find((u) => u.id === id || u.email.toLowerCase() === id.toLowerCase()) || null;
+    if (user && !user.username) {
+      user.username = generateAutoUsername(user.name, user.email, user.id);
+      saveToDisk();
+    }
+    return user;
+  },
+
+  getUserByUsername(username: string): ServerUserRecord | null {
+    const clean = username.trim().toLowerCase().replace(/^@/, "");
+    return getState().users.find((u) => {
+      const uName = (u.username || generateAutoUsername(u.name, u.email, u.id)).toLowerCase();
+      return uName === clean;
+    }) || null;
   },
 
   saveUser(user: ServerUserRecord): ServerUserRecord {
     const state = getState();
+    if (!user.username) {
+      user.username = generateAutoUsername(user.name, user.email, user.id);
+    }
     const idx = state.users.findIndex((u) => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
     if (idx >= 0) {
       state.users[idx] = { ...state.users[idx], ...user };

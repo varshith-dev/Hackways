@@ -4,17 +4,13 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  BarChartIcon,
   TicketIcon,
   UsersGroupIcon,
   FilterIcon,
-  ShieldCheckIcon,
   CheckCircleIcon,
   QrCodeIcon,
   ArrowRightIcon,
-  RefreshCwIcon,
   PresentationIcon,
-  LockIcon,
   UserIcon,
   ZapIcon,
   CopyIcon,
@@ -24,8 +20,6 @@ import {
   MailIcon,
   ClockIcon,
   MapPinIcon,
-  SparklesIcon,
-  CalendarIcon,
 } from "@/components/icons/hugeicons";
 import { SlideOverDrawer } from "@/components/ui/SlideOverDrawer";
 import { Modal } from "@/components/ui/Modal";
@@ -33,6 +27,8 @@ import { useToast } from "@/components/ui/Toast";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import DashboardArtwork from "@/components/ui/DashboardArtwork";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { formatOrganizerDisplay } from "@/lib/userFormat";
 import CameraScanner from "@/components/events/CameraScanner";
 import MobileEventOverview from "@/components/events/MobileEventOverview";
 import mobileStyles from "@/components/events/MobileEventDashboard.module.css";
@@ -57,10 +53,7 @@ import {
 import { EventItem, EventTeam, EventStaffMember, MediaAsset, RSVPQuestion, QuestionType, TicketApprovalMode, EventScheduleItem, EventFaq, EventPageTheme } from "@/lib/types";
 import { readImageFile } from "@/lib/imageUpload";
 
-// apps/console has no public-facing event page of its own — the live event
-// page only exists in apps/web — so any link off this dashboard to the
-// public URL must cross over to that app instead of staying relative.
-const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3000";
+import { WEB_APP_URL, webAppHref } from "@/lib/webAppUrl";
 
 export interface EventTicketTier {
   id: string;
@@ -96,6 +89,7 @@ export default function EventDashboardView({
   initialTeams,
 }: EventDashboardViewProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const isMPath = pathname?.startsWith("/m");
   const mobilePrefix = isMPath ? "/m" : "/mobile";
   const consoleBase = `${mobileView ? mobilePrefix : "/console"}/events/${encodeURIComponent(eventId)}`;
@@ -429,7 +423,13 @@ export default function EventDashboardView({
       : [
           {
             id: event.organizer_id || "lead_owner",
-            name: event.hosts?.[0] || "Lead Event Organizer",
+            name: formatOrganizerDisplay({
+              hostName: event.hosts?.[0],
+              channelName: event.channel_name,
+              username: event.organizer_username || user?.username,
+              name: user?.name,
+              organizerId: event.organizer_id,
+            }),
             email: "event-director@hackways.internal",
             role: "Event Owner & Director",
             gate: "All Doors & Turnstiles",
@@ -1246,6 +1246,50 @@ export default function EventDashboardView({
     }
   };
 
+  const handleApproveAttendeeCancellation = async (attId: string) => {
+    try {
+      const res = await fetch(`/api/v1/attendees/${attId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve_cancellation" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAttendees(getEventAttendees(eventId));
+        getEvent(eventId).then((ev) => {
+          if (ev) setEvent(ev);
+        });
+        showToast(data.message || "Cancellation approved; spot released.");
+      } else {
+        showToast(data.error || "Failed to approve cancellation.");
+      }
+    } catch {
+      showToast("Network error approving cancellation.");
+    }
+  };
+
+  const handleDeclineAttendeeCancellation = async (attId: string) => {
+    try {
+      const res = await fetch(`/api/v1/attendees/${attId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "decline_cancellation" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAttendees(getEventAttendees(eventId));
+        getEvent(eventId).then((ev) => {
+          if (ev) setEvent(ev);
+        });
+        showToast(data.message || "Cancellation declined; pass restored.");
+      } else {
+        showToast(data.error || "Failed to decline cancellation.");
+      }
+    } catch {
+      showToast("Network error declining cancellation.");
+    }
+  };
+
   const handleConfirmCancelRegistration = () => {
     if (!cancellingAttendee) return;
     setIsCancellingAttendee(true);
@@ -1345,12 +1389,13 @@ export default function EventDashboardView({
       if (attendeesSubtab === "waitlist") return matchQuery && a.status === "WAITLIST";
       if (attendeesSubtab === "vip") return matchQuery && a.isVip;
       if (attendeesSubtab === "speakers") return matchQuery && a.isSpeaker;
-      if (attendeesSubtab === "cancelled") return matchQuery && (a.status === "CANCELLED" || a.status === "REFUNDED");
+      if (attendeesSubtab === "cancelled") return matchQuery && (a.status === "CANCELLED" || a.status === "REFUNDED" || a.status === "BLOCKED" || !!a.cancellationRequested);
       return matchQuery;
     });
 
   const pendingApprovalCount = attendees.filter((a) => a.status === "PENDING_APPROVAL").length;
   const waitlistCount = attendees.filter((a) => a.status === "WAITLIST").length;
+  const cancellationRequestedCount = attendees.filter((a) => a.status === "BLOCKED" || !!a.cancellationRequested).length;
   const cancelledCount = attendees.filter((a) => a.status === "CANCELLED" || a.status === "REFUNDED").length;
 
   const totalCapacity = tiers.reduce((sum, t) => sum + (Number(t.inventory) || 0), 0) || event?.total_capacity || 0;
@@ -1418,6 +1463,40 @@ export default function EventDashboardView({
   return (
     <div className={mobileView ? mobileStyles.content : "space-y-6 max-w-6xl"} data-mobile-event-dashboard={mobileView || undefined}>
       {activeTab === "overview" && mobileView && <MobileEventOverview event={event} registrations={totalTicketsSold} checkedIn={checkedInCount} remaining={ticketsRemaining} />}
+
+      {/* Omnipresent Event Dashboard Context Bar */}
+      {!mobileView && (
+        <div className="flex items-center justify-between py-2 border-b border-zinc-100 mb-2">
+          <div className="flex items-center gap-2 text-xs font-heading">
+            <Link
+              href="/console/organizer/events"
+              className="inline-flex items-center gap-1.5 font-medium text-zinc-500 hover:text-zinc-950 transition"
+            >
+              <ArrowRightIcon size={12} className="rotate-180 text-zinc-400" />
+              <span>Organizer Console</span>
+            </Link>
+            <span className="text-zinc-300">/</span>
+            <span className="font-semibold text-zinc-900 truncate max-w-[240px]">
+              {event?.title || event?.slug || eventId}
+            </span>
+            <span className="text-zinc-300">/</span>
+            <span className="capitalize text-zinc-500 font-mono text-[11px] bg-zinc-100 px-2 py-0.5 rounded">
+              {activeTab}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href={webAppHref(`/events/${encodeURIComponent(event?.slug || eventId)}`)}
+              target="_blank"
+              className="text-xs font-medium text-zinc-600 hover:text-zinc-950 inline-flex items-center gap-1 transition"
+            >
+              <span>Live Public Page</span>
+              <ArrowRightIcon size={11} className="-rotate-45 text-zinc-400" />
+            </Link>
+          </div>
+        </div>
+      )}
       {/* ------------------------------------------------------------------ */}
       {/* 1. OVERVIEW                                                        */}
       {/* ------------------------------------------------------------------ */}
@@ -1426,6 +1505,17 @@ export default function EventDashboardView({
           {/* Header Card */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200/80 pb-6">
             <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Link
+                  href="/console/organizer/events"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-950 transition"
+                >
+                  <ArrowRightIcon size={12} className="rotate-180 text-zinc-400" />
+                  <span>All Events</span>
+                </Link>
+                <span className="text-zinc-300">/</span>
+                <span className="text-xs text-zinc-400 font-mono truncate max-w-[200px]">{event?.slug || eventId}</span>
+              </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
                 <span>
                   {event?.time_display ||
@@ -1450,7 +1540,7 @@ export default function EventDashboardView({
 
             <div className="flex items-center gap-2.5">
               <Link
-                href={`${WEB_APP_URL}/events/${event?.slug || eventId}`}
+                href={webAppHref(`/events/${encodeURIComponent(event?.slug || eventId)}`)}
                 target="_blank"
                 className="btn-secondary group"
               >
@@ -1607,6 +1697,24 @@ export default function EventDashboardView({
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Link
+                  href="/console/organizer/events"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-950 transition"
+                >
+                  <ArrowRightIcon size={12} className="rotate-180 text-zinc-400" />
+                  <span>All Events</span>
+                </Link>
+                <span className="text-zinc-300">/</span>
+                <Link
+                  href={`/console/events/${encodeURIComponent(event?.slug || eventId)}/overview`}
+                  className="text-xs font-medium text-zinc-600 hover:text-zinc-950 transition truncate max-w-[200px]"
+                >
+                  {event?.title || event?.slug || eventId}
+                </Link>
+                <span className="text-zinc-300">/</span>
+                <span className="text-xs text-zinc-400 font-mono">Setup</span>
+              </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 font-heading">
                 Event Setup & Details
               </h1>
@@ -1820,7 +1928,13 @@ export default function EventDashboardView({
                       </label>
                       <div className="h-9 px-3 rounded-md border border-zinc-200 bg-zinc-50/70 flex items-center justify-between text-xs text-zinc-800">
                         <span className="font-medium truncate">
-                          {event?.hosts?.[0] || event?.organizer_id || "Event Host"}
+                          {formatOrganizerDisplay({
+                            hostName: event?.hosts?.[0],
+                            channelName: event?.channel_name,
+                            username: event?.organizer_username || user?.username,
+                            name: user?.name,
+                            organizerId: event?.organizer_id,
+                          })}
                         </span>
                         <span className="text-[10px] text-zinc-500 font-medium">Verified host</span>
                       </div>
@@ -2344,7 +2458,14 @@ export default function EventDashboardView({
                         </p>
                       </div>
                       <label className="btn-secondary cursor-pointer py-1.5 px-3 text-xs">
-                        <span>{isUploadingAsset ? "Uploading..." : "+ Upload Assets"}</span>
+                        {isUploadingAsset ? (
+                          <span>Uploading...</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            <PlusIcon size={13} aria-hidden="true" />
+                            Upload Assets
+                          </span>
+                        )}
                         <input
                           type="file"
                           multiple
@@ -3646,7 +3767,11 @@ export default function EventDashboardView({
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {att.status === "PENDING_APPROVAL" ? (
+                      {att.status === "BLOCKED" || !!att.cancellationRequested ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                          Cancellation Requested (Pass Blocked)
+                        </span>
+                      ) : att.status === "PENDING_APPROVAL" ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-800 border border-zinc-200">
                           Requires Approval
                         </span>
@@ -3669,7 +3794,26 @@ export default function EventDashboardView({
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {att.status === "CANCELLED" || att.status === "REFUNDED" ? (
+                      {att.status === "BLOCKED" || !!att.cancellationRequested ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveAttendeeCancellation(att.id)}
+                            className="h-6 px-2.5 inline-flex items-center text-[11px] font-heading font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded shadow-2xs transition active:scale-[0.98]"
+                            title="Approve cancellation and revoke pass"
+                          >
+                            Approve Cancellation
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeclineAttendeeCancellation(att.id)}
+                            className="h-6 px-2.5 inline-flex items-center text-[11px] font-heading font-medium text-zinc-700 hover:text-zinc-950 bg-white hover:bg-zinc-50 border border-zinc-200 rounded shadow-2xs transition active:scale-[0.98]"
+                            title="Decline cancellation and keep pass active"
+                          >
+                            Decline / Keep Pass
+                          </button>
+                        </div>
+                      ) : att.status === "CANCELLED" || att.status === "REFUNDED" ? (
                         <span className="text-zinc-400 font-normal italic text-[11px]">Pass Revoked</span>
                       ) : att.status === "PENDING_APPROVAL" ? (
                         <div className="flex items-center gap-1.5">
@@ -5507,127 +5651,133 @@ export default function EventDashboardView({
       </SlideOverDrawer>
 
       {/* Delete Event Confirmation Modal */}
-      {isDeleteModalOpen && event && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl border border-zinc-200 max-w-md w-full p-6 shadow-xl space-y-4">
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-zinc-950 font-heading">Delete Event</h3>
-              <p className="text-xs text-zinc-600 leading-relaxed font-body">
-                This will delete <span className="font-bold text-zinc-900 font-heading">"{event.title}"</span> from your host dashboard. Active listings, ticket passes, and attendee rosters will be removed from your view, but all payment records, ticket logs, and compliance manifests will be archived and retained by Super Admin.
-              </p>
-            </div>
+      <Modal
+        isOpen={isDeleteModalOpen && !!event}
+        onClose={() => {
+          if (isDeleting) return;
+          setIsDeleteModalOpen(false);
+          setDeleteConfirmName("");
+        }}
+        title="Delete Event"
+        width="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-zinc-600 leading-relaxed font-body">
+            This will delete <span className="font-bold text-zinc-900 font-heading">&quot;{event?.title}&quot;</span> from your host dashboard. Active listings, ticket passes, and attendee rosters will be removed from your view, but all payment records, ticket logs, and compliance manifests will be archived and retained by Super Admin.
+          </p>
 
-            <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2">
-              <p className="text-xs text-zinc-700 font-medium font-body">
-                To confirm, type <span className="font-mono font-bold text-zinc-950 bg-zinc-100 px-1.5 py-0.5 rounded select-all">{event.title}</span> below:
-              </p>
-              <input
-                type="text"
-                value={deleteConfirmName}
-                onChange={(e) => setDeleteConfirmName(e.target.value)}
-                placeholder={`Type "${event.title}"`}
-                className="w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/20 font-mono"
-                autoFocus
-              />
-            </div>
+          <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2">
+            <p className="text-xs text-zinc-700 font-medium font-body">
+              To confirm, type <span className="font-mono font-bold text-zinc-950 bg-zinc-100 px-1.5 py-0.5 rounded select-all">{event?.title}</span> below:
+            </p>
+            <input
+              type="text"
+              value={deleteConfirmName}
+              onChange={(e) => setDeleteConfirmName(e.target.value)}
+              placeholder={`Type "${event?.title ?? ""}"`}
+              className="w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600/20 font-mono"
+              autoFocus
+            />
+          </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setDeleteConfirmName("");
-                }}
-                disabled={isDeleting}
-                className="h-8 px-3 text-xs font-semibold text-zinc-700 hover:text-zinc-950 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-md transition font-heading"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteCurrentEvent}
-                disabled={deleteConfirmName.trim() !== event.title.trim() || isDeleting}
-                className="h-8 px-4 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600 rounded-md transition shadow-2xs font-heading cursor-pointer disabled:cursor-not-allowed"
-              >
-                {isDeleting ? "Deleting..." : "Delete this event"}
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeleteModalOpen(false);
+                setDeleteConfirmName("");
+              }}
+              disabled={isDeleting}
+              className="h-8 px-3 text-xs font-semibold text-zinc-700 hover:text-zinc-950 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-md transition font-heading"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDeleteCurrentEvent}
+              disabled={deleteConfirmName.trim() !== (event?.title ?? "").trim() || isDeleting}
+              className="h-8 px-4 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600 rounded-md transition shadow-2xs font-heading cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isDeleting ? "Deleting..." : "Delete this event"}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Cancel Registration Confirmation Modal */}
-      {cancellingAttendee && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl border border-zinc-200 max-w-md w-full p-6 shadow-xl space-y-4">
-            <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-zinc-950 font-heading">
-                Cancel Registration
-              </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed font-body">
-                Are you sure you want to cancel the registration for{" "}
-                <span className="font-bold text-zinc-900 font-heading">
-                  {cancellingAttendee.name}
-                </span>{" "}
-                ({cancellingAttendee.email})?
-              </p>
-            </div>
+      <Modal
+        isOpen={!!cancellingAttendee}
+        onClose={() => {
+          if (isCancellingAttendee) return;
+          setCancellingAttendee(null);
+          setCancelReason("");
+        }}
+        title="Cancel Registration"
+        width="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-zinc-600 leading-relaxed font-body">
+            Are you sure you want to cancel the registration for{" "}
+            <span className="font-bold text-zinc-900 font-heading">
+              {cancellingAttendee?.name}
+            </span>{" "}
+            ({cancellingAttendee?.email})?
+          </p>
 
-            <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs font-body">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Ticket Pass:</span>
-                <span className="font-mono font-bold text-zinc-900">{cancellingAttendee.ticketCode}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Tier:</span>
-                <span className="font-semibold text-zinc-800">{cancellingAttendee.tierName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Current Status:</span>
-                <span className="font-semibold text-zinc-800">{cancellingAttendee.status}</span>
-              </div>
-              <p className="text-[11px] text-zinc-500 pt-1.5 border-t border-zinc-200/80 leading-normal">
-                This will invalidate their ticket pass and release 1 spot back to the tier capacity.
-              </p>
+          <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-2 text-xs font-body">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Ticket Pass:</span>
+              <span className="font-mono font-bold text-zinc-900">{cancellingAttendee?.ticketCode}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Tier:</span>
+              <span className="font-semibold text-zinc-800">{cancellingAttendee?.tierName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Current Status:</span>
+              <span className="font-semibold text-zinc-800">{cancellingAttendee?.status}</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 pt-1.5 border-t border-zinc-200/80 leading-normal">
+              This will invalidate their ticket pass and release 1 spot back to the tier capacity.
+            </p>
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-700 font-heading">
-                Cancellation Reason (Optional)
-              </label>
-              <input
-                type="text"
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="e.g., Cancelled per attendee request"
-                className="w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 font-body"
-              />
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-700 font-heading">
+              Cancellation Reason (Optional)
+            </label>
+            <input
+              type="text"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="e.g., Cancelled per attendee request"
+              className="w-full bg-white border border-zinc-300 rounded-md px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-zinc-900 font-body"
+            />
+          </div>
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setCancellingAttendee(null);
-                  setCancelReason("");
-                }}
-                disabled={isCancellingAttendee}
-                className="h-8 px-3 text-xs font-semibold text-zinc-700 hover:text-zinc-950 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-md transition font-heading"
-              >
-                Keep Registration
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmCancelRegistration}
-                disabled={isCancellingAttendee}
-                className="h-8 px-4 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 rounded-md transition shadow-2xs font-heading cursor-pointer"
-              >
-                {isCancellingAttendee ? "Cancelling..." : "Confirm Cancellation"}
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCancellingAttendee(null);
+                setCancelReason("");
+              }}
+              disabled={isCancellingAttendee}
+              className="h-8 px-3 text-xs font-semibold text-zinc-700 hover:text-zinc-950 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-md transition font-heading"
+            >
+              Keep Registration
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmCancelRegistration}
+              disabled={isCancellingAttendee}
+              className="h-8 px-4 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 rounded-md transition shadow-2xs font-heading cursor-pointer"
+            >
+              {isCancellingAttendee ? "Cancelling..." : "Confirm Cancellation"}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* ------------------------------------------------------------------ */}
       {/* INVITE ATTENDEES MODAL                                             */}

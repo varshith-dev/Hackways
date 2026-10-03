@@ -23,6 +23,7 @@ import {
 import { getStoredEvents, getAllAttendees, getAllOrders } from "@/lib/api";
 import { EventItem } from "@/lib/types";
 import MobileConsoleHeader from "./_components/MobileConsoleHeader";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function MobileConsoleRootPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -76,7 +77,7 @@ export default function MobileConsoleRootPage() {
 
             <div className="grid grid-cols-2 gap-2.5">
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 onClick={() => setActionsOpen(false)}
                 className="p-3.5 rounded-xl border border-[#dedee2] hover:bg-[#fafafa] flex flex-col items-center text-center gap-1.5 transition"
               >
@@ -171,7 +172,7 @@ export default function MobileConsoleRootPage() {
                 <p className="text-xs text-[#707077] mt-0.5">Create your first event to get started.</p>
               </div>
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#202022] text-white text-xs font-medium hover:opacity-90 transition"
               >
                 <Plus size={14} />

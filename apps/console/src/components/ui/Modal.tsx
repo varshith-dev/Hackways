@@ -23,6 +23,8 @@ export function Modal({
   className = "",
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = React.useId();
+  const descriptionId = React.useId();
 
   // Close on Escape key
   useEffect(() => {
@@ -43,6 +45,42 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
+  // Focus management: move focus into the dialog on open, trap Tab within it,
+  // and restore focus to the triggering element on close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const node = modalRef.current;
+    if (!node) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    node.focus();
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const focusable = node.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    node.addEventListener("keydown", handleTabKey);
+    return () => {
+      node.removeEventListener("keydown", handleTabKey);
+      previouslyFocused?.focus?.();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const maxWidthClass = {
@@ -58,6 +96,8 @@ export function Modal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
+      aria-describedby={description ? descriptionId : undefined}
     >
       {/* Backdrop */}
       <div
@@ -69,21 +109,26 @@ export function Modal({
       {/* Centered Modal Card */}
       <div
         ref={modalRef}
-        className={`relative z-10 w-full ${maxWidthClass} bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden transition-all duration-200 animate-in zoom-in-95 ${className}`}
+        tabIndex={-1}
+        className={`relative z-10 w-full ${maxWidthClass} bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden outline-none transition-all duration-200 animate-in zoom-in-95 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
         <div className="px-6 pt-5 pb-4 flex items-start justify-between border-b border-zinc-100">
           <div>
-            {title ? (
-              <h2 className="text-base font-bold text-zinc-950 font-heading tracking-tight">
+            {title && (
+              <h2
+                id={titleId}
+                className="text-base font-bold text-zinc-950 font-heading tracking-tight"
+              >
                 {title}
               </h2>
-            ) : (
-              <div className="h-2" />
             )}
             {description && (
-              <p className="text-xs text-zinc-500 mt-0.5 font-body">
+              <p
+                id={descriptionId}
+                className="text-xs text-zinc-500 mt-0.5 font-body"
+              >
                 {description}
               </p>
             )}

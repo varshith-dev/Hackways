@@ -270,8 +270,25 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  html { scroll-behavior: smooth; }
+/* Official Lenis.dev styling: prevents CSS smooth-scroll fighting */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
 }
 
 /* Elements settle as they enter the viewport. Scroll-linked, so it tracks the

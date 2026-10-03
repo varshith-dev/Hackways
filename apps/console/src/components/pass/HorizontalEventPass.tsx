@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EventItem } from "@/lib/types";
 import { UserTicket, StoredAttendee } from "@/lib/api";
 import { EventPassQRCode } from "./EventPassQRCode";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   CalendarIcon,
   MapPinIcon,
@@ -218,14 +219,14 @@ export const HorizontalEventPass: React.FC<HorizontalEventPassProps> = ({
       <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs print:hidden">
         <div className="flex items-center gap-3 text-zinc-500">
           <Link
-            href={`/events/${event.id}`}
+            href={webAppHref(`/events/${event.id}`)}
             className="hover:text-zinc-950 font-medium transition flex items-center gap-1"
           >
             <span>Back to event</span>
             <ArrowRightIcon size={12} />
           </Link>
-          <span>•</span>
-          <Link href="/profile" className="hover:text-zinc-950 font-medium transition">
+          <span className="h-3 w-px bg-zinc-200" aria-hidden="true" />
+          <Link href={webAppHref("/profile")} className="hover:text-zinc-950 font-medium transition">
             My Passes
           </Link>
         </div>

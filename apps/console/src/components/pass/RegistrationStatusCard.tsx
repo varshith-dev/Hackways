@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { EventItem, EventTeam } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 import { UserTicket, StoredAttendee } from "@/lib/api";
 import {
   CalendarIcon,
@@ -172,7 +173,7 @@ export const RegistrationStatusCard: React.FC<RegistrationStatusCardProps> = ({
       {/* 06. Clean Bottom Action Row */}
       <div className="pt-6 border-t border-zinc-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
         <Link
-          href={`/events/${event.id}`}
+          href={webAppHref(`/events/${event.id}`)}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full h-11 px-6 text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition active:scale-[0.98] shadow-xs cursor-pointer"
         >
           <span>Back to Event Details</span>

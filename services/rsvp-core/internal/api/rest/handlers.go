@@ -62,7 +62,7 @@ func (h *Handler) RegisterRoutes() http.Handler {
 	// the client-facing API.
 	mux.HandleFunc("PATCH /api/v1/users/me", h.requireAuth(h.handleUpdateMe))
 	mux.HandleFunc("POST /api/v1/users/me/organizer", h.requireAuth(h.handleBecomeOrganizer))
-	mux.HandleFunc("GET /api/v1/users", h.handleListUsers)
+	mux.HandleFunc("GET /api/v1/users", h.requireRole(domain.RoleAdmin)(h.handleListUsers))
 
 	// Events Endpoints
 	mux.HandleFunc("GET /api/v1/events", h.handleListEvents)
@@ -105,6 +105,12 @@ func (h *Handler) handleListEvents(w http.ResponseWriter, r *http.Request) {
 
 	resp := []EventWithTiers{}
 	for _, ev := range events {
+		// This listing has no session check — it's the public discovery feed,
+		// not an organizer's console — so draft/cancelled events must never
+		// appear in it regardless of who's asking.
+		if ev.Status != domain.EventStatusPublished && ev.Status != domain.EventStatusSoldOut {
+			continue
+		}
 		tiers, _ := h.repo.GetTiersByEvent(r.Context(), ev.ID)
 		if tiers == nil {
 			// A nil Go slice marshals to JSON null, not []  — a free event

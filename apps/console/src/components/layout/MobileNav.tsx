@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { MenuIcon, XIcon } from "@/components/icons/hugeicons";
+import { webAppHref } from "@/lib/webAppUrl";
 
 const LINKS = [
   { href: "/home", label: "Discover" },
@@ -72,7 +73,7 @@ export default function MobileNav() {
           </Link>
         ))}
         <Link
-          href="/login"
+          href={webAppHref("/login")}
           onClick={() => setOpen(false)}
           className="pt-3 font-semibold text-caviar"
         >

@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { serverStore } from "@/lib/serverStore";
 import { sendEmail, escapeHtml } from "@/lib/mailman";
+import { requireSession } from "@/lib/serverAuth";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = requireSession(req, ["admin"]);
+  if (session instanceof NextResponse) return session;
+
   const { id } = await params;
   const user = serverStore.getUserById(id);
   if (!user) {
@@ -60,6 +64,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = requireSession(req, ["admin"]);
+  if (session instanceof NextResponse) return session;
+
   const { id } = await params;
   const user = serverStore.getUserById(id);
   if (!user) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, CalendarDays, MapPin, QrCode, Settings2, Ticket, Users } from "lucide-react";
 import type { EventItem } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 import styles from "./MobileEventDashboard.module.css";
 
 export default function MobileEventOverview({ event, registrations, checkedIn, remaining }: {
@@ -51,7 +52,7 @@ export default function MobileEventOverview({ event, registrations, checkedIn, r
         <Link href={`${base}/tickets`}><Ticket size={19} aria-hidden="true" /><span>Tickets<small>{remaining.toLocaleString()} available</small></span><ArrowRight size={16} aria-hidden="true" /></Link>
         <Link href={`${base}/setup`}><Settings2 size={19} aria-hidden="true" /><span>Event details</span><ArrowRight size={16} aria-hidden="true" /></Link>
       </nav>
-      <Link className={styles.preview} href={`/events/${encodeURIComponent(event.slug || event.id)}`}>View event page<ArrowRight size={15} aria-hidden="true" /></Link>
+      <Link className={styles.preview} href={webAppHref(`/events/${encodeURIComponent(event.slug || event.id)}`)}>View event page<ArrowRight size={15} aria-hidden="true" /></Link>
     </section>
   );
 }

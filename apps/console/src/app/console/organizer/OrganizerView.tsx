@@ -38,6 +38,7 @@ import {
   StoredAttendee,
 } from "@/lib/api";
 import { EventItem, Channel } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   MOCK_ADMIN_EVENTS,
   MOCK_ADMIN_ORDERS,
@@ -174,9 +175,23 @@ export default function OrganizerView({
   useEffect(() => {
     const refreshOrganizerData = () => {
       const stored = getStoredEvents();
-      setEventsList(stored.map(mapEventToOrganizerRecord));
-      setOrders(getAllOrders() as any);
-      setAttendees(getAllAttendees() as any);
+      const userEmail = (user?.email || "").toLowerCase();
+      const userId = user?.userId;
+      const isAdmin = user?.role === "admin";
+
+      const filtered = isAdmin
+        ? stored
+        : stored.filter((e) =>
+            (userId && e.organizer_id === userId) ||
+            (userEmail && e.organizer_id && e.organizer_id.toLowerCase() === userEmail) ||
+            (e.hosts && e.hosts.some((h) => (userId && h === userId) || (userEmail && h.toLowerCase() === userEmail))) ||
+            (e.host_users && e.host_users.some((h) => (userId && h.user_id === userId) || (userEmail && h.email?.toLowerCase() === userEmail)))
+          );
+
+      const ownedIds = new Set(filtered.map((e) => e.id));
+      setEventsList(filtered.map(mapEventToOrganizerRecord));
+      setOrders((getAllOrders() as any[]).filter((o) => isAdmin || ownedIds.has(o.eventId)));
+      setAttendees((getAllAttendees() as any[]).filter((a) => isAdmin || ownedIds.has(a.eventId)));
       if (typeof window !== "undefined") {
         setConditionalQuestionsFeature(localStorage.getItem("hackways_feature_conditional_questions") === "true");
         const storedTeam = localStorage.getItem("hackways_organizer_team");
@@ -200,7 +215,7 @@ export default function OrganizerView({
       window.removeEventListener("hackways_events_updated", refreshOrganizerData);
       window.removeEventListener("hackways_tickets_updated", refreshOrganizerData);
     };
-  }, []);
+  }, [user]);
 
   const handleToggleConditionalQuestionsFeature = (enabled: boolean) => {
     setConditionalQuestionsFeature(enabled);
@@ -519,7 +534,7 @@ export default function OrganizerView({
 
             <div className="flex items-center gap-2">
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 className="px-3.5 py-1.5 bg-zinc-950 text-white rounded-md text-xs font-medium hover:bg-zinc-800 transition shadow-2xs"
               >
                 Create Event
@@ -639,7 +654,7 @@ export default function OrganizerView({
                             <p className="text-xs text-zinc-500 mt-1 font-body">
                               Create your first event drop to start tracking real-time sales and attendance metrics.
                             </p>
-                            <Link href="/create" className="btn-primary mt-4 text-xs">
+                            <Link href={webAppHref("/create")} className="btn-primary mt-4 text-xs">
                               Create Event Drop
                             </Link>
                           </div>
@@ -789,7 +804,7 @@ export default function OrganizerView({
                 />
               </div>
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 className="btn-primary"
               >
                 <ZapIcon size={12} className="text-zinc-400" />
@@ -929,7 +944,7 @@ export default function OrganizerView({
                                     <ArrowRightIcon size={11} className="text-zinc-400" />
                                   </button>
                                   <Link
-                                    href={`/events/${encodeURIComponent(evt.slug || evt.id)}`}
+                                    href={webAppHref(`/events/${encodeURIComponent(evt.slug || evt.id)}`)}
                                     target="_blank"
                                     onClick={() => setActiveMenuEventId(null)}
                                     className="flex items-center justify-between px-3 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 font-heading font-medium transition"
@@ -1018,7 +1033,7 @@ export default function OrganizerView({
                           <p className="text-xs text-zinc-500 mt-1 font-body">
                             Launch a public or private event drop to sell tickets and admit guests.
                           </p>
-                          <Link href="/create" className="btn-primary mt-4 text-xs">
+                          <Link href={webAppHref("/create")} className="btn-primary mt-4 text-xs">
                             Host First Event Drop
                           </Link>
                         </div>
@@ -2963,6 +2978,7 @@ export default function OrganizerView({
                   title: newEventTitle.trim(),
                   description: newEventSubtitle.trim() || "",
                   organizer_id: selectedChan ? selectedChan.id : user.userId,
+                  organizer_username: user.username,
                   organizer_type: drawerHostType,
                   channel_id: selectedChan?.id,
                   channel_name: selectedChan?.name,
@@ -2975,7 +2991,7 @@ export default function OrganizerView({
                   category: newEventCategory,
                   banner_url: "",
                   square_banner_url: "",
-                  hosts: selectedChan ? [selectedChan.name] : [user.name || user.email],
+                  hosts: selectedChan ? [selectedChan.name] : [(user.username ? `@${user.username}` : user.name || "Event Host")],
                   host_users: [{ user_id: user.userId, name: user.name || user.email, email: user.email, role: "Primary Host" }],
                   tiers: [
                     {

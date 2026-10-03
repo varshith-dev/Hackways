@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { serverStore } from "@/lib/serverStore";
 import { requireSession } from "@/lib/serverAuth";
+import { eventOwnerIds } from "@/lib/tenantAccess";
 
 export async function GET() {
   const events = serverStore.getEvents();
@@ -8,37 +9,33 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  // Any signed-in account can create an event — hosting isn't gated by role.
   const session = requireSession(req);
-  if (session instanceof NextResponse) {
-    const referer = req.headers.get("referer") || "";
-    if (!referer.includes("/console") && !referer.includes("/events")) {
-      return session;
-    }
-  }
-  const sessionUser = !(session instanceof NextResponse) ? session : null;
+  if (session instanceof NextResponse) return session;
 
   try {
     const data = await req.json();
     if (!data.id || !data.title) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+    const existing = serverStore.getEventById(data.id);
+    if (existing && session.role !== "admin" && !eventOwnerIds(existing).includes(session.sub)) {
+      return NextResponse.json({ error: "An event with this ID already exists and you do not have permission to modify it." }, { status: 403 });
+    }
     const slug = typeof data.slug === "string" ? data.slug.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "-").replace(/^-+|-+$/g, "") : "";
     if (slug && serverStore.getEvents().some((event) => event.id !== data.id && event.slug === slug)) {
       return NextResponse.json({ error: "This event link is already in use. Edit the link or choose another event name." }, { status: 409 });
     }
-    const orgId = sessionUser?.sub || data.organizer_id || "org_current";
-    data.host_users = [{ user_id: orgId, name: sessionUser?.name || "Primary Host", email: sessionUser?.email || "host@hackways.me", role: "Primary Host" }];
-    if (!data.organizer_id) data.organizer_id = orgId;
+    // The primary host is always the authenticated caller, never a client-supplied
+    // field, so nobody can claim ownership of an event under someone else's name.
+    data.organizer_id = existing?.organizer_id || session.sub;
+    data.host_users = existing?.host_users || [{ user_id: session.sub, name: session.name, email: session.email, role: "Primary Host" }];
 
     const saved = serverStore.saveEvent(data);
     return NextResponse.json({ event: saved }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to save event" }, { status: 500 });
   }
-}
-
-function isEventOwner(event: { organizer_id?: string; host_users?: Array<{ user_id: string }> }, userId: string): boolean {
-  return event.organizer_id === userId || event.host_users?.[0]?.user_id === userId;
 }
 
 export async function DELETE(req: Request) {
@@ -51,7 +48,7 @@ export async function DELETE(req: Request) {
     if (id) {
       const event = serverStore.getEventById(id);
       if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
-      if (session.role !== "admin" && !isEventOwner(event, session.sub)) {
+      if (session.role !== "admin" && !eventOwnerIds(event).includes(session.sub)) {
         return NextResponse.json({ error: "You don't have permission to do that" }, { status: 403 });
       }
       const reason = searchParams.get("reason") || undefined;

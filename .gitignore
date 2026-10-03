@@ -1,5 +1,10 @@
 # Local operational notes with production secrets — never commit this.
 claudememory.md
+DEPLOYMENT_AND_VM_GUIDE.md
+# Multi-agent coordination logs — real secrets have been pasted into these
+# live (DB password, auth secret); never commit either.
+AGENT_MESSAGING.md
+CLAUDE_MESSAGES.md
 
 # Shared dev fallback store — real user emails/attendee records, never commit this.
 .server_data/

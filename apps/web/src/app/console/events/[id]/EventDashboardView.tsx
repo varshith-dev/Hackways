@@ -33,6 +33,8 @@ import { useToast } from "@/components/ui/Toast";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import DashboardArtwork from "@/components/ui/DashboardArtwork";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { formatOrganizerDisplay } from "@/lib/userFormat";
 import CameraScanner from "@/components/events/CameraScanner";
 import MobileEventOverview from "@/components/events/MobileEventOverview";
 import mobileStyles from "@/components/events/MobileEventDashboard.module.css";
@@ -57,10 +59,7 @@ import {
 import { EventItem, EventTeam, EventStaffMember, MediaAsset, RSVPQuestion, QuestionType, TicketApprovalMode, EventScheduleItem, EventFaq, EventPageTheme } from "@/lib/types";
 import { readImageFile } from "@/lib/imageUpload";
 
-// apps/console has no public-facing event page of its own — the live event
-// page only exists in apps/web — so any link off this dashboard to the
-// public URL must cross over to that app instead of staying relative.
-const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3000";
+const WEB_APP_URL = "";
 
 export interface EventTicketTier {
   id: string;
@@ -96,6 +95,7 @@ export default function EventDashboardView({
   initialTeams,
 }: EventDashboardViewProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const isMPath = pathname?.startsWith("/m");
   const mobilePrefix = isMPath ? "/m" : "/mobile";
   const consoleBase = `${mobileView ? mobilePrefix : "/console"}/events/${encodeURIComponent(eventId)}`;
@@ -1246,6 +1246,50 @@ export default function EventDashboardView({
     }
   };
 
+  const handleApproveAttendeeCancellation = async (attId: string) => {
+    try {
+      const res = await fetch(`/api/v1/attendees/${attId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve_cancellation" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAttendees(getEventAttendees(eventId));
+        getEvent(eventId).then((ev) => {
+          if (ev) setEvent(ev);
+        });
+        showToast(data.message || "Cancellation approved; spot released.");
+      } else {
+        showToast(data.error || "Failed to approve cancellation.");
+      }
+    } catch {
+      showToast("Network error approving cancellation.");
+    }
+  };
+
+  const handleDeclineAttendeeCancellation = async (attId: string) => {
+    try {
+      const res = await fetch(`/api/v1/attendees/${attId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "decline_cancellation" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAttendees(getEventAttendees(eventId));
+        getEvent(eventId).then((ev) => {
+          if (ev) setEvent(ev);
+        });
+        showToast(data.message || "Cancellation declined; pass restored.");
+      } else {
+        showToast(data.error || "Failed to decline cancellation.");
+      }
+    } catch {
+      showToast("Network error declining cancellation.");
+    }
+  };
+
   const handleConfirmCancelRegistration = () => {
     if (!cancellingAttendee) return;
     setIsCancellingAttendee(true);
@@ -1345,12 +1389,13 @@ export default function EventDashboardView({
       if (attendeesSubtab === "waitlist") return matchQuery && a.status === "WAITLIST";
       if (attendeesSubtab === "vip") return matchQuery && a.isVip;
       if (attendeesSubtab === "speakers") return matchQuery && a.isSpeaker;
-      if (attendeesSubtab === "cancelled") return matchQuery && (a.status === "CANCELLED" || a.status === "REFUNDED");
+      if (attendeesSubtab === "cancelled") return matchQuery && (a.status === "CANCELLED" || a.status === "REFUNDED" || a.status === "BLOCKED" || !!a.cancellationRequested);
       return matchQuery;
     });
 
   const pendingApprovalCount = attendees.filter((a) => a.status === "PENDING_APPROVAL").length;
   const waitlistCount = attendees.filter((a) => a.status === "WAITLIST").length;
+  const cancellationRequestedCount = attendees.filter((a) => a.status === "BLOCKED" || !!a.cancellationRequested).length;
   const cancelledCount = attendees.filter((a) => a.status === "CANCELLED" || a.status === "REFUNDED").length;
 
   const totalCapacity = tiers.reduce((sum, t) => sum + (Number(t.inventory) || 0), 0) || event?.total_capacity || 0;
@@ -1820,7 +1865,13 @@ export default function EventDashboardView({
                       </label>
                       <div className="h-9 px-3 rounded-md border border-zinc-200 bg-zinc-50/70 flex items-center justify-between text-xs text-zinc-800">
                         <span className="font-medium truncate">
-                          {event?.hosts?.[0] || event?.organizer_id || "Event Host"}
+                          {formatOrganizerDisplay({
+                            hostName: event?.hosts?.[0],
+                            channelName: event?.channel_name,
+                            username: event?.organizer_username || user?.username,
+                            name: user?.name,
+                            organizerId: event?.organizer_id,
+                          })}
                         </span>
                         <span className="text-[10px] text-zinc-500 font-medium">Verified host</span>
                       </div>
@@ -3646,7 +3697,11 @@ export default function EventDashboardView({
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {att.status === "PENDING_APPROVAL" ? (
+                      {att.status === "BLOCKED" || !!att.cancellationRequested ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                          Cancellation Requested (Pass Blocked)
+                        </span>
+                      ) : att.status === "PENDING_APPROVAL" ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-800 border border-zinc-200">
                           Requires Approval
                         </span>
@@ -3669,7 +3724,26 @@ export default function EventDashboardView({
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {att.status === "CANCELLED" || att.status === "REFUNDED" ? (
+                      {att.status === "BLOCKED" || !!att.cancellationRequested ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleApproveAttendeeCancellation(att.id)}
+                            className="h-6 px-2.5 inline-flex items-center text-[11px] font-heading font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded shadow-2xs transition active:scale-[0.98]"
+                            title="Approve cancellation and revoke pass"
+                          >
+                            Approve Cancellation
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeclineAttendeeCancellation(att.id)}
+                            className="h-6 px-2.5 inline-flex items-center text-[11px] font-heading font-medium text-zinc-700 hover:text-zinc-950 bg-white hover:bg-zinc-50 border border-zinc-200 rounded shadow-2xs transition active:scale-[0.98]"
+                            title="Decline cancellation and keep pass active"
+                          >
+                            Decline / Keep Pass
+                          </button>
+                        </div>
+                      ) : att.status === "CANCELLED" || att.status === "REFUNDED" ? (
                         <span className="text-zinc-400 font-normal italic text-[11px]">Pass Revoked</span>
                       ) : att.status === "PENDING_APPROVAL" ? (
                         <div className="flex items-center gap-1.5">

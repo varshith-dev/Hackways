@@ -149,9 +149,16 @@ export const HorizontalEventPass: React.FC<HorizontalEventPassProps> = ({
           <div className="space-y-4">
             {/* Top Bar */}
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 font-semibold">
-                Admission Pass
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 font-semibold">
+                  Admission Pass
+                </span>
+                {(attendee?.status === "BLOCKED" || ticket?.status === "BLOCKED" || attendee?.cancellationRequested) && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                    Cancellation Pending Review (Pass Blocked)
+                  </span>
+                )}
+              </div>
 
               {event.channel_name && (
                 <div className="text-xs font-medium text-zinc-500 truncate max-w-[180px]">
@@ -245,13 +252,13 @@ export const HorizontalEventPass: React.FC<HorizontalEventPassProps> = ({
       <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs print:hidden">
         <div className="flex items-center gap-3 text-zinc-500">
           <Link
-            href={`/events/${event.id}`}
+            href={`/events/${encodeURIComponent(event.slug || event.id)}`}
             className="hover:text-zinc-950 font-medium transition flex items-center gap-1"
           >
             <span>Back to event</span>
             <ArrowRightIcon size={12} />
           </Link>
-          <span>•</span>
+          <span className="h-3 w-px bg-zinc-200" aria-hidden="true" />
           <Link href="/profile" className="hover:text-zinc-950 font-medium transition">
             My Passes
           </Link>
@@ -269,14 +276,20 @@ export const HorizontalEventPass: React.FC<HorizontalEventPassProps> = ({
           )}
 
           {onCancelRSVP && (
-            <button
-              type="button"
-              onClick={onCancelRSVP}
-              disabled={isCancelling}
-              className="text-zinc-400 hover:text-rose-600 transition disabled:opacity-50 cursor-pointer"
-            >
-              {isCancelling ? "Requesting cancellation..." : "Request cancellation"}
-            </button>
+            (attendee?.status === "BLOCKED" || ticket?.status === "BLOCKED" || attendee?.cancellationRequested) ? (
+              <span className="text-amber-700 font-medium text-[11px]">
+                Cancellation Under Host Review
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={onCancelRSVP}
+                disabled={isCancelling}
+                className="text-zinc-400 hover:text-rose-600 transition disabled:opacity-50 cursor-pointer"
+              >
+                {isCancelling ? "Requesting cancellation..." : "Request cancellation"}
+              </button>
+            )
           )}
         </div>
       </div>

@@ -17,12 +17,7 @@ const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 export async function POST(req: Request) {
   const session = requireSession(req);
   if (session instanceof NextResponse) {
-    const referer = req.headers.get("referer") || "";
-    const origin = req.headers.get("origin") || "";
-    // Allow upload if from console / same-origin app
-    if (!referer.includes("/console") && !referer.includes("/events") && !origin) {
-      return session;
-    }
+    return session;
   }
 
   const form = await req.formData().catch(() => null);

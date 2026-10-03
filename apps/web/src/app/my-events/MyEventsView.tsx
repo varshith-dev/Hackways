@@ -16,6 +16,7 @@ const labels: Record<UserTicket["status"], EventDetail> = {
   CHECKED_IN: { label: "Checked in", tone: "confirmed" },
   WAITLIST: { label: "On the waitlist", tone: "pending" },
   PENDING_APPROVAL: { label: "Awaiting approval", tone: "pending" },
+  BLOCKED: { label: "Cancellation requested", tone: "pending" },
   CANCELLED: { label: "Registration cancelled", tone: "cancelled" },
 };
 
@@ -37,7 +38,7 @@ export default function MyEventsView() {
     const event = events.find((item) => item.id === ticket.event_id);
     detailMap[ticket.event_id] = {
       ...labels[ticket.status],
-      href: `/events/${ticket.event_id}`,
+      href: `/events/${encodeURIComponent(event?.slug || ticket.event_slug || ticket.event_id)}`,
       action: "View event",
     };
     if (event?.status === "CANCELLED") {

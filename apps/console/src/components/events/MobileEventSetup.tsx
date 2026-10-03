@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { getEvent, getEventSync, saveEvent } from "@/lib/api";
 import { readImageFile } from "@/lib/imageUpload";
 import type { EventItem } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 import styles from "./MobileEventSetup.module.css";
 
 function toSlug(value: string) {
@@ -108,7 +109,7 @@ export default function MobileEventSetup({ eventId, initialEvent }: {
       <div className={styles.missing}>
         <h1>Event not found</h1>
         <p>This event isn&apos;t available on this device.</p>
-        <Link href="/my-events">Back to my events</Link>
+        <Link href={webAppHref("/my-events")}>Back to my events</Link>
       </div>
     );
   }
@@ -142,7 +143,7 @@ export default function MobileEventSetup({ eventId, initialEvent }: {
             placeholder="your-event"
           />
         </div>
-        <Link className={styles.previewLink} href={`/events/${encodeURIComponent(slug || event.id)}`}>
+        <Link className={styles.previewLink} href={webAppHref(`/events/${encodeURIComponent(slug || event.id)}`)}>
           Preview public page
         </Link>
       </div>

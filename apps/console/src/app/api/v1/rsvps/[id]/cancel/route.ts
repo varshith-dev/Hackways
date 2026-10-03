@@ -30,7 +30,7 @@ export async function POST(
   }
 
   // 2. Standalone serverStore execution
-  const success = serverStore.cancelAttendee(rsvpId);
+  const success = serverStore.requestAttendeeCancellation(rsvpId);
   if (!success) {
     return NextResponse.json({ error: "RSVP not found or already cancelled" }, { status: 404 });
   }
@@ -38,13 +38,14 @@ export async function POST(
   const attendee = serverStore.getAttendeeById(rsvpId);
 
   return NextResponse.json({
-    message: "RSVP successfully cancelled; spot released",
+    message: "Cancellation request submitted. Spot blocked pending host decision.",
     rsvp: attendee ? {
       id: attendee.id,
       event_id: attendee.eventId,
       user_name: attendee.name,
       user_email: attendee.email,
-      status: "CANCELLED",
-    } : { id: rsvpId, status: "CANCELLED" },
+      status: "BLOCKED",
+      cancellation_requested: true,
+    } : { id: rsvpId, status: "BLOCKED" },
   });
 }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { EventItem } from "@/lib/types";
 import { useToast } from "@/components/ui/Toast";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function CheckinDashboard() {
   const { showToast } = useToast();
@@ -296,7 +297,7 @@ export default function CheckinDashboard() {
             <p>No attendees found for this event roster.</p>
             {events.length === 0 && (
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 className="inline-block text-xs font-semibold text-zinc-900 underline underline-offset-4"
               >
                 Create your first event drop

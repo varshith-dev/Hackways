@@ -30,6 +30,7 @@ import { canAccessModule, CONSOLE_MODULES } from "@/lib/platformSettings";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { getStoredEvents, getStoredChannels } from "@/lib/api";
 import { EventItem, Channel } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 
 interface SubItem {
   name: string;
@@ -66,12 +67,45 @@ export default function ConsoleLayout({
     pathname.startsWith("/console/users") ||
     pathname.startsWith("/console/kpi");
 
+  const [hasEventOrCommunity, setHasEventOrCommunity] = useState<boolean | null>(null);
+
   useEffect(() => {
     if (isLoading) return;
     if (isSuperAdminSuite && !isAdmin) {
       router.replace("/console/organizer");
+      return;
     }
-  }, [isLoading, isSuperAdminSuite, isAdmin, router]);
+
+    if (!user) return;
+    if (isAdmin) {
+      setHasEventOrCommunity(true);
+      return;
+    }
+
+    const checkAccess = () => {
+      const events = getStoredEvents();
+      const channels = getStoredChannels();
+      const userEmail = (user.email || "").toLowerCase();
+      const userId = user.userId;
+
+      const ownsEvent = events.some(
+        (e) =>
+          (e.organizer_id && (e.organizer_id === userId || e.organizer_id.toLowerCase() === userEmail)) ||
+          (e.hosts && e.hosts.some((h) => h === userId || h.toLowerCase() === userEmail)) ||
+          (e.host_users && e.host_users.some((h) => h.user_id === userId || h.email?.toLowerCase() === userEmail))
+      );
+
+      const ownsCommunity = channels.some(
+        (c) =>
+          (c.owner_id && (c.owner_id === userId || c.owner_id.toLowerCase() === userEmail)) ||
+          (c.members && c.members.some((m) => (m.user_id === userId || m.email?.toLowerCase() === userEmail) && (m.role === "owner" || m.role === "admin" || m.role === "host")))
+      );
+
+      setHasEventOrCommunity(ownsEvent || ownsCommunity);
+    };
+
+    checkAccess();
+  }, [isLoading, isSuperAdminSuite, isAdmin, user, router]);
 
   if (isSuperAdminSuite && !isLoading && !isAdmin) {
     return (
@@ -88,6 +122,44 @@ export default function ConsoleLayout({
           >
             Go to Organizer Console
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Must own an event or a community to access the console
+  if (user && hasEventOrCommunity === false && !pathname.startsWith("/console/start")) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#fafafa] p-6 font-body text-zinc-900">
+        <div className="text-center max-w-md bg-white p-8 rounded-2xl border border-zinc-200/90 shadow-2xs space-y-4">
+          <div className="w-12 h-12 rounded-full bg-zinc-100 text-zinc-800 flex items-center justify-center mx-auto">
+            <PresentationIcon size={22} />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-zinc-950 font-heading">Organizer Console Access</h2>
+            <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">
+              To access the organizer console, you must create at least one event or own a community.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={webAppHref("/events/create")}
+              className="w-full sm:w-auto px-4 py-2 bg-zinc-950 text-white text-xs font-semibold rounded-lg hover:bg-zinc-800 transition text-center"
+            >
+              Create an Event
+            </a>
+            <a
+              href={webAppHref("/channels/create")}
+              className="w-full sm:w-auto px-4 py-2 bg-white border border-zinc-200 text-zinc-800 text-xs font-semibold rounded-lg hover:bg-zinc-50 transition text-center"
+            >
+              Launch Community
+            </a>
+          </div>
+          <div className="pt-2">
+            <a href={webAppHref("/profile")} className="text-[11px] text-zinc-400 hover:text-zinc-600 transition">
+              Return to Profile
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -465,7 +537,7 @@ function DesktopConsoleLayout({
           </aside>
 
           {/* Main Content Canvas: Independently Scrollable */}
-          <main className="flex-1 h-full min-h-0 overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch] bg-white p-4 sm:p-6 lg:p-8">
+          <main data-lenis-prevent="true" className="flex-1 h-full min-h-0 overflow-y-auto overscroll-contain [touch-action:pan-y] [-webkit-overflow-scrolling:touch] bg-white p-4 sm:p-6 lg:p-8">
             {deniedModule && (
               <div role="alert" className="mb-6 flex items-center justify-between gap-4 border-b border-zinc-200 pb-4">
                 <p className="text-xs text-zinc-600">
@@ -689,7 +761,7 @@ function TwoColumnSidebar({
                     </div>
                     <div className="border-t border-zinc-100 mt-1 pt-1 px-2 space-y-0.5">
                       <Link
-                        href="/channels/create"
+                        href={webAppHref("/channels/create")}
                         onClick={() => setSwitcherOpen(false)}
                         className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50 rounded-md font-medium transition"
                       >

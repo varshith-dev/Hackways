@@ -9,7 +9,7 @@ interface DuplicateRSVPNoticeProps {
 
 export const DuplicateRSVPNotice: React.FC<DuplicateRSVPNoticeProps> = ({ email }) => {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-xs text-zinc-800">
+    <div role="status" className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-xs text-zinc-800">
       <div className="flex items-start gap-2.5">
         <CheckCircleIcon size={16} className="text-zinc-600 shrink-0 mt-0.5" />
         <div>

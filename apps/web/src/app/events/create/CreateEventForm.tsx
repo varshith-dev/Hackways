@@ -60,6 +60,7 @@ export default function CreateEventForm() {
       const draft: EventItem = {
         id, slug: slug || id, title: title.trim(), description: "",
         organizer_id: channel?.id ?? user.userId, organizer_type: hostType,
+        organizer_username: user.username,
         ...(channel ? {
           channel_id: channel.id, channel_name: channel.name, channel_slug: channel.slug,
           channel_avatar: channel.avatar_url,
@@ -68,7 +69,7 @@ export default function CreateEventForm() {
         } : {}),
         status: "DRAFT", total_capacity: 100, created_at: new Date().toISOString(),
         tiers: [{ id: tierId, event_id: id, name: "General Admission", total_capacity: 100, remaining_capacity: 100, price_cents: 0, approval_mode: "AUTO_APPROVE" }],
-        hosts: [channel?.name || user.name || user.email],
+        hosts: [channel?.name || (user.username ? `@${user.username}` : user.name || "Event Host")],
         host_users: [{ user_id: user.userId, name: user.name || user.email, email: user.email, role: "Primary Host" }],
         attendee_count: 0, banner_url: banner, square_banner_url: squareBanner,
       };

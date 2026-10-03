@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { serverStore } from "@/lib/serverStore";
 import { AppHeader } from "@/components/app-shell/AppHeader";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default async function VerifyPage({
   searchParams,
@@ -55,7 +56,7 @@ export default async function VerifyPage({
               Open Console
             </Link>
             <Link
-              href="/events"
+              href={webAppHref("/events")}
               className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-zinc-200 text-zinc-700 font-semibold text-xs hover:bg-zinc-50 transition"
             >
               Browse Events

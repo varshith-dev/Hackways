@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { serverStore } from "@/lib/serverStore";
 import { requireSession } from "@/lib/serverAuth";
+import { eventOwnerIds } from "@/lib/tenantAccess";
 import { EventItem } from "@/lib/types";
 
-function isEventOwner(event: { organizer_id?: string; host_users?: Array<{ user_id: string }> }, userId: string): boolean {
-  return event.organizer_id === userId || event.host_users?.[0]?.user_id === userId;
-}
-
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -32,7 +29,29 @@ export async function GET(
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
-  return NextResponse.json({ event, tiers: event.tiers || [] });
+
+  const session = requireSession(req);
+  const isAuthorizedHost = !(session instanceof NextResponse) && (session.role === "admin" || eventOwnerIds(event).includes(session.sub));
+
+  // If event is in DRAFT or DELETED status, only authorized hosts/admin can view it
+  if ((event.status === "DRAFT" || (event as any).is_deleted) && !isAuthorizedHost) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  }
+
+  // Sanitize internal host emails and staff members for general public viewers
+  const sanitizedEvent = isAuthorizedHost
+    ? event
+    : {
+        ...event,
+        host_users: (event.host_users || []).map((h) => ({
+          user_id: h.user_id,
+          name: h.name,
+          role: h.role,
+        })),
+        staff_members: undefined,
+      };
+
+  return NextResponse.json({ event: sanitizedEvent, tiers: event.tiers || [] });
 }
 
 export async function PUT(
@@ -40,17 +59,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = requireSession(req);
-  if (session instanceof NextResponse) {
-    const referer = req.headers.get("referer") || "";
-    if (!referer.includes("/console") && !referer.includes("/events")) {
-      return session;
-    }
-  }
+  if (session instanceof NextResponse) return session;
 
   const { id } = await params;
   const existing = serverStore.getEventById(id);
-  const sessionUser = !(session instanceof NextResponse) ? session : null;
-  if (existing && sessionUser && sessionUser.role !== "admin" && !isEventOwner(existing, sessionUser.sub)) {
+  if (existing && session.role !== "admin" && !eventOwnerIds(existing).includes(session.sub)) {
     return NextResponse.json({ error: "You don't have permission to do that" }, { status: 403 });
   }
 
@@ -62,8 +75,11 @@ export async function PUT(
     if (typeof data.square_banner_url === "string" && data.square_banner_url.startsWith("blob:")) {
       delete data.square_banner_url;
     }
-    const organizerId = existing?.organizer_id || sessionUser?.sub || data.organizer_id || "org_current";
-    const hostUsers = existing?.host_users || data.host_users || [{ user_id: organizerId, name: sessionUser?.name || "Organizer", email: sessionUser?.email || "organizer@hackways.me", role: "Primary Host" }];
+    // Ownership is always derived from the existing record or the authenticated
+    // caller — never from the client-supplied body — so a PUT can't reassign an
+    // event to another organizer.
+    const organizerId = existing?.organizer_id || session.sub;
+    const hostUsers = existing?.host_users || data.host_users || [{ user_id: organizerId, name: session.name, email: session.email, role: "Primary Host" }];
     const targetId = existing?.id || data.id || id;
     const targetSlug = data.slug || existing?.slug || id;
     const updated = serverStore.saveEvent({ ...existing, ...data, id: targetId, slug: targetSlug, organizer_id: organizerId, host_users: hostUsers });
@@ -85,7 +101,7 @@ export async function DELETE(
   if (!existing) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
-  if (session.role !== "admin" && !isEventOwner(existing, session.sub)) {
+  if (session.role !== "admin" && !eventOwnerIds(existing).includes(session.sub)) {
     return NextResponse.json({ error: "You don't have permission to do that" }, { status: 403 });
   }
 

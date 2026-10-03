@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Users, Eye, TrendingUp, UserCheck, ExternalLink, ChevronRight } from "lucide-react";
 import { getStoredChannels, getStoredEvents, getAllAttendees } from "@/lib/api";
 import { Channel, EventItem } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function MobileCommunityAnalyticsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -149,7 +150,7 @@ export default function MobileCommunityAnalyticsPage() {
               {channels.map((chan) => (
                 <Link
                   key={chan.id}
-                  href={`/channels/${encodeURIComponent(chan.slug || chan.id)}`}
+                  href={webAppHref(`/channels/${encodeURIComponent(chan.slug || chan.id)}`)}
                   className="p-3.5 rounded-xl border border-zinc-100 bg-zinc-50/50 hover:bg-zinc-100 transition flex items-center justify-between text-xs"
                 >
                   <div className="min-w-0 flex-1">

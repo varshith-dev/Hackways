@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "./sessionToken";
 import type { UserSession } from "./types";
 
+import { serverStore } from "./serverStore";
+import { generateAutoUsername } from "./userFormat";
+
 export const GO_BACKEND_URL = process.env.RSVP_SERVICE_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // must match auth.TokenTTL in the Go service
@@ -9,11 +12,35 @@ const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // must match auth.TokenTTL in
 /** The Go service's User JSON uses "id"; the frontend's UserSession type uses
  * "userId" everywhere (see lib/types.ts). Every response that hands a Go user
  * object to the client goes through this, so the two never drift apart again. */
-export function toUserSession(goUser: { id: string; email: string; name: string; role: string }): UserSession {
+export function toUserSession(goUser: { id: string; email: string; name: string; role: string; username?: string; avatar?: string }): UserSession {
+  let username = goUser.username;
+  if (!username) {
+    const stored = serverStore.getUserById(goUser.id);
+    if (stored?.username) {
+      username = stored.username;
+    } else {
+      username = generateAutoUsername(goUser.name, goUser.email, goUser.id);
+      serverStore.saveUser({
+        id: goUser.id,
+        name: goUser.name,
+        email: goUser.email,
+        username,
+        avatar: goUser.avatar,
+        accountStatus: "ACTIVE",
+        verificationStatus: "VERIFIED",
+        accountType: goUser.role === "organizer" ? "ORGANIZER" : "ATTENDEE",
+        joinedDate: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+      });
+    }
+  }
+
   return {
     userId: goUser.id,
     email: goUser.email,
     name: goUser.name,
+    username,
+    avatar: goUser.avatar,
     role: goUser.role as UserSession["role"],
   };
 }

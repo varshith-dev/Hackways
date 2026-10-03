@@ -148,7 +148,7 @@ export const RegistrationStatusCard: React.FC<RegistrationStatusCardProps> = ({
               readOnly
               value={
                 typeof window !== "undefined"
-                  ? `${window.location.origin}/events/${event.id}/rsvp?team=${team.code}`
+                  ? `${window.location.origin}/events/${encodeURIComponent(event.slug || event.id)}/rsvp?team=${team.code}`
                   : ""
               }
               className="flex-1 rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-2 text-xs font-mono text-zinc-700 select-all focus:outline-none"
@@ -156,7 +156,7 @@ export const RegistrationStatusCard: React.FC<RegistrationStatusCardProps> = ({
             <button
               type="button"
               onClick={() => {
-                const link = `${window.location.origin}/events/${event.id}/rsvp?team=${team.code}`;
+                const link = `${window.location.origin}/events/${encodeURIComponent(event.slug || event.id)}/rsvp?team=${team.code}`;
                 navigator.clipboard.writeText(link);
                 setCopiedTeamLink(true);
                 setTimeout(() => setCopiedTeamLink(false), 2000);
@@ -172,7 +172,7 @@ export const RegistrationStatusCard: React.FC<RegistrationStatusCardProps> = ({
       {/* 06. Clean Bottom Action Row */}
       <div className="pt-6 border-t border-zinc-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
         <Link
-          href={`/events/${event.id}`}
+          href={`/events/${encodeURIComponent(event.slug || event.id)}`}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full h-11 px-6 text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition active:scale-[0.98] shadow-xs cursor-pointer"
         >
           <span>Back to Event Details</span>

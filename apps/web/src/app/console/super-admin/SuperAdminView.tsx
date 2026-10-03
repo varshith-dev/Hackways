@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import DashboardArtwork, { DashboardArtworkKind } from "@/components/ui/DashboardArtwork";
 import { PageSkeleton } from "@/components/ui/Skeleton";
+import { formatOrganizerDisplay } from "@/lib/userFormat";
 import {
   Ticket,
   Building2,
@@ -236,7 +237,12 @@ export default function SuperAdminView({ activeTab }: { activeTab: SuperAdminTab
         return {
           id: ev.id,
           title: ev.title,
-          organizer: ev.hosts?.[0] || ev.organizer_id || "Platform Host",
+          organizer: formatOrganizerDisplay({
+            hostName: ev.hosts?.[0],
+            channelName: ev.channel_name,
+            username: ev.organizer_username,
+            organizerId: ev.organizer_id,
+          }),
           date: ev.start_time || "Upcoming",
           status: ev.deleted_by_organizer || ev.status === "DELETED" ? "DELETED" : (ev.status || "PUBLISHED"),
           category: ev.category || "General",

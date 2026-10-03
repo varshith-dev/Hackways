@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getAllOrders, getPlatformMetrics, StoredOrder } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import DashboardArtwork from "@/components/ui/DashboardArtwork";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   CheckCircleIcon,
   ShieldCheckIcon,
@@ -221,7 +222,7 @@ export default function FinanceOverviewPage() {
                 </p>
               </div>
               <Link
-                href="/create"
+                href={webAppHref("/create")}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-md bg-zinc-950 text-white hover:bg-zinc-800 transition shadow-2xs"
               >
                 Create an Event Drop

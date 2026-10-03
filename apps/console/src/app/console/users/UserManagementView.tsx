@@ -5,7 +5,9 @@ import Link from "next/link";
 import DashboardArtwork from "@/components/ui/DashboardArtwork";
 import { useRouter, useSearchParams } from "next/navigation";
 import Logo3D from "@/components/ui/Logo3D";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { MetricCard } from "../kpi/components/MetricCard";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   getManagedUsers,
   getUserTabKpis,
@@ -199,6 +201,7 @@ const USER_NAV_CATEGORIES: NavCategory[] = [
 export default function UserManagementView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const tabParam = searchParams.get("tab") as UserNavSection | null;
   const subTabParam = searchParams.get("subtab");
@@ -303,10 +306,10 @@ export default function UserManagementView() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/console/organizer/overview"
+            href={user?.role === "admin" ? "/console/super-admin/overview" : "/console/organizer/overview"}
             className="text-xs font-medium text-zinc-700 hover:text-zinc-950 px-4 py-1.5 rounded-full border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
-            <span>Exit to Console</span>
+            <span>{user?.role === "admin" ? "Back to Super Admin" : "Back to Organizer"}</span>
             <ArrowUpRight size={13} />
           </Link>
         </div>
@@ -496,7 +499,7 @@ export default function UserManagementView() {
               </p>
               <div className="mt-4 flex items-center gap-2">
                 <Link
-                  href="/create"
+                  href={webAppHref("/create")}
                   className="px-5 py-2.5 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition inline-flex items-center gap-2 shadow-xs cursor-pointer"
                 >
                   <Plus size={13} />

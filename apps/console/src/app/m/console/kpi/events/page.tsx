@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, ChevronRight, Plus } from "lucide-react";
 import { getStoredEvents, getAllAttendees, getAllOrders } from "@/lib/api";
 import { EventItem } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function MobileEventsKpiPage() {
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -42,7 +43,7 @@ export default function MobileEventsKpiPage() {
             </p>
           </div>
           <Link
-            href="/create"
+            href={webAppHref("/create")}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-zinc-950 text-white text-xs font-semibold whitespace-nowrap shrink-0 shadow-xs"
           >
             <Plus size={13} />

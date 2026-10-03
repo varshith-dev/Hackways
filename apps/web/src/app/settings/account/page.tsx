@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/app-shell/AppHeader";
 import { PageSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { validateUsername } from "@/lib/userFormat";
 
 const ROLE_LABELS: Record<string, string> = {
   attendee: "Attendee",
@@ -18,6 +19,7 @@ export default function AccountSettingsPage() {
   const { user, isLoading, logout, refreshUser } = useAuth();
 
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -27,14 +29,31 @@ export default function AccountSettingsPage() {
   }, [isLoading, user, router]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (user) setName(user.name);
+    if (user) {
+      setName(user.name);
+      setUsername(user.username || "");
+    }
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError("Full name cannot be empty.");
+      return;
+    }
+
+    const cleanUsername = username.trim().toLowerCase().replace(/^@/, "");
+    if (!cleanUsername) {
+      setError("Username cannot be empty.");
+      return;
+    }
+
+    const valResult = validateUsername(cleanUsername);
+    if (!valResult.valid) {
+      setError(valResult.error || "Invalid username format.");
+      return;
+    }
 
     setError("");
     setSaved(false);
@@ -43,7 +62,7 @@ export default function AccountSettingsPage() {
       const res = await fetch("/api/v1/users/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name: trimmedName, username: cleanUsername }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -70,6 +89,10 @@ export default function AccountSettingsPage() {
     );
   }
 
+  const currentCleanUser = (user.username || "").toLowerCase().replace(/^@/, "");
+  const inputCleanUser = username.trim().toLowerCase().replace(/^@/, "");
+  const isUnchanged = name.trim() === user.name && inputCleanUser === currentCleanUser;
+
   return (
     <div className="min-h-screen bg-[#fafafa]">
       <AppHeader />
@@ -78,12 +101,36 @@ export default function AccountSettingsPage() {
           Account settings
         </h1>
         <p className="mt-2 text-sm text-zinc-500">
-          Manage the name and details on your Hackways account.
+          Manage your organizer handle, display name, and profile details.
         </p>
 
         <form onSubmit={handleSave} className="mt-10 space-y-6 border-t border-zinc-200 pt-8">
           <div>
-            <label htmlFor="account-name" className="text-xs font-semibold text-zinc-700 block mb-1.5">Full name</label>
+            <label htmlFor="account-username" className="text-xs font-semibold text-zinc-700 block mb-1.5">
+              Username
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-0 text-sm font-semibold text-zinc-400 select-none">@</span>
+              <input
+                id="account-username"
+                type="text"
+                required
+                maxLength={30}
+                value={username.replace(/^@/, "")}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                placeholder="username"
+                className="w-full border-b border-zinc-200 bg-transparent pl-4 pr-0 py-2.5 text-sm font-mono text-zinc-900 focus:border-zinc-900 focus:outline-none transition"
+              />
+            </div>
+            <p className="mt-1.5 text-[11px] text-zinc-400">
+              Your unique handle on Hackways. Auto-allotted and displayed on your events and dashboard.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="account-name" className="text-xs font-semibold text-zinc-700 block mb-1.5">
+              Full name
+            </label>
             <input
               id="account-name"
               type="text"
@@ -124,7 +171,7 @@ export default function AccountSettingsPage() {
 
           <button
             type="submit"
-            disabled={isSaving || name.trim() === user.name}
+            disabled={isSaving || isUnchanged}
             className="rounded-full bg-zinc-950 px-6 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-zinc-800 transition disabled:opacity-50"
           >
             {isSaving ? "Saving…" : "Save changes"}

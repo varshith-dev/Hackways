@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import Logo3D from "@/components/ui/Logo3D";
+import { webAppHref } from "@/lib/webAppUrl";
 import styles from "./AppHeader.module.css";
 
 export interface AppHeaderProps {
@@ -171,7 +172,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             </div>
           ) : (
             <Link
-              href="/login"
+              href={webAppHref("/login")}
               className={`rounded-full px-5 py-2 text-xs font-semibold transition shadow-xs ${
                 isDark
                   ? "bg-white text-zinc-950 hover:bg-zinc-200"

@@ -2963,6 +2963,7 @@ export default function OrganizerView({
                   title: newEventTitle.trim(),
                   description: newEventSubtitle.trim() || "",
                   organizer_id: selectedChan ? selectedChan.id : user.userId,
+                  organizer_username: user.username,
                   organizer_type: drawerHostType,
                   channel_id: selectedChan?.id,
                   channel_name: selectedChan?.name,
@@ -2975,7 +2976,7 @@ export default function OrganizerView({
                   category: newEventCategory,
                   banner_url: "",
                   square_banner_url: "",
-                  hosts: selectedChan ? [selectedChan.name] : [user.name || user.email],
+                  hosts: selectedChan ? [selectedChan.name] : [(user.username ? `@${user.username}` : user.name || "Event Host")],
                   host_users: [{ user_id: user.userId, name: user.name || user.email, email: user.email, role: "Primary Host" }],
                   tiers: [
                     {

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Logo3D from "@/components/ui/Logo3D";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { MetricCard } from "../kpi/components/MetricCard";
 import {
   AreaChart,
@@ -25,6 +26,7 @@ import {
   MarketingFilterState,
 } from "./data/marketingData";
 import { ShortLinkTracker } from "@/lib/types";
+import { webAppHref } from "@/lib/webAppUrl";
 import {
   BarChartIcon,
   TicketIcon,
@@ -258,6 +260,7 @@ export const MARKETING_NAV_CATEGORIES: NavCategory[] = [
 export default function MarketingDashboardView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const moduleParam = searchParams.get("tab") as MarketingModule | null;
   const subTabParam = searchParams.get("subtab");
@@ -602,10 +605,10 @@ export default function MarketingDashboardView() {
           </button>
 
           <Link
-            href="/console/organizer/overview"
+            href={user?.role === "admin" ? "/console/super-admin/overview" : "/console/organizer/overview"}
             className="text-xs font-medium text-zinc-700 hover:text-zinc-950 px-4 py-1.5 rounded-full border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
-            <span>Exit to Console</span>
+            <span>{user?.role === "admin" ? "Back to Super Admin" : "Back to Organizer"}</span>
             <ArrowUpRight size={13} />
           </Link>
         </div>
@@ -1913,7 +1916,7 @@ export default function MarketingDashboardView() {
                               <td className="py-3 px-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
                                   <a
-                                    href={`/l/${link.code}`}
+                                    href={webAppHref(`/l/${link.code}`)}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="p-1.5 rounded-md border border-zinc-200 text-zinc-600 hover:bg-zinc-100 transition"

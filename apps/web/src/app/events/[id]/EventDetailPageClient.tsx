@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppHeader } from "@/components/app-shell/AppHeader";
 import { getEvent, getEventSync, getExistingRSVP, ExistingRSVPInfo, recordEventPageView } from "@/lib/api";
+import { scheduleLoad } from "@/lib/scheduler/progressiveLoader";
 import { EventItem, TicketTier } from "@/lib/types";
 import { useEventSSE } from "@/hooks/useEventSSE";
 import {
@@ -17,13 +18,34 @@ import {
   ArrowRightIcon,
   CalendarIcon,
   SparklesIcon,
+  PlusIcon,
   UsersGroupIcon,
 } from "@/components/icons/hugeicons";
 import { DuplicateRSVPNotice } from "@/components/feedback/DuplicateRSVPNotice";
 
-// apps/console is a separate app (different port/origin) — the event's full
-// management dashboard lives there, not inside this public page.
-const CONSOLE_APP_URL = process.env.NEXT_PUBLIC_CONSOLE_URL || "http://localhost:3001";
+// In production, console is served under the same origin (hackways.me/console) via reverse proxy.
+// In development, it runs on port 3001.
+const CONSOLE_APP_URL =
+  process.env.NEXT_PUBLIC_CONSOLE_URL ||
+  (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
+    ? ""
+    : process.env.NODE_ENV === "production"
+    ? ""
+    : "http://localhost:3001");
+
+function MetaIconBadge({ dark, children }: { dark: boolean; children: React.ReactNode }) {
+  return (
+    <div
+      className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+        dark
+          ? "bg-zinc-800/80 text-zinc-300 border border-zinc-700/40"
+          : "bg-zinc-100 text-zinc-600 border border-zinc-200"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
 
 function PartnerBrandMark({ name }: { name: string }) {
   const n = name.toLowerCase();
@@ -143,7 +165,9 @@ export default function EventDetailPageClient({
     !!ev &&
     (user.role === "admin" ||
       ev.organizer_id === user.userId ||
-      !!ev.host_users?.some((h) => h.user_id === user.userId));
+      (!!user.email && ev.organizer_id?.toLowerCase() === user.email.toLowerCase()) ||
+      (!!ev.hosts && ev.hosts.some((h) => h === user.userId || (!!user.email && h.toLowerCase() === user.email.toLowerCase()))) ||
+      !!ev.host_users?.some((h) => h.user_id === user.userId || (!!user.email && h.email?.toLowerCase() === user.email.toLowerCase())));
 
   // Instant synchronous hydration — Zero loading delay on refresh!
   const [event, setEvent] = useState<EventItem | null>(() => initialEvent || getEventSync(id));
@@ -152,7 +176,12 @@ export default function EventDetailPageClient({
     return initial?.tiers?.[0] || null;
   });
   const [autoDarkTheme, setAutoDarkTheme] = useState(true);
-  const [aspectRatio, setAspectRatio] = useState<"16/9" | "1/1">("16/9");
+  const [aspectRatio, setAspectRatio] = useState<"16/9" | "1/1">(() => {
+    const ev = initialEvent || getEventSync(id);
+    if (ev?.banner_url) return "16/9";
+    if (ev?.square_banner_url) return "1/1";
+    return "16/9";
+  });
   const [existingRSVP, setExistingRSVP] = useState<ExistingRSVPInfo | null>(null);
   const router = useRouter();
 
@@ -194,12 +223,17 @@ export default function EventDetailPageClient({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRefreshFailed(false);
-    getEvent(id).then((ev) => {
+    // Core event data is above-the-fold and blocking (high priority); the
+    // page-view telemetry it triggers is fire-and-forget background work
+    // (low priority) — scheduleLoad keeps both off an unmetered burst
+    // without changing what either call does or returns.
+    scheduleLoad(() => getEvent(id), { priority: "high", cacheKey: `event:${id}`, ttlMs: 30_000 }).then((ev) => {
       if (ev) {
         setEvent(ev);
-        recordEventPageView(id, {
-          city: ev.city ? `${ev.city}, India` : "Hyderabad, Telangana",
-        });
+        scheduleLoad(
+          () => recordEventPageView(id, { city: ev.city ? `${ev.city}, India` : "Hyderabad, Telangana" }),
+          { priority: "low" }
+        );
         if (ev.tiers.length > 0) {
           setSelectedTier((prev) => prev || ev.tiers[0]);
         }
@@ -365,47 +399,39 @@ export default function EventDetailPageClient({
       {/* Seamlessly Integrated Header with Subtle Glassy Feel and No Border (Locked at Top) */}
       <AppHeader theme={isDarkTheme ? "dark" : "light"} transparent={true} />
 
-      {/* Main container: Full-width with minimal safe edge spacing matching AppHeader (no artificial center squishing) */}
-      <main className="relative z-10 flex-1 flex flex-col justify-between w-full px-6 sm:px-10 lg:px-14 pt-24 sm:pt-28 pb-12">
-        <div className="space-y-12 sm:space-y-16">
-          {/* 01. Hero Section (Most Prior) */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-start">
-            {/* Mobile Poster (Adapts to acceptable 16:9 and 1:1 ratios) */}
-            <div className="block lg:hidden order-1">
-              <div
-                className={`${
-                  aspectRatio === "16/9" ? "aspect-16/9 max-w-lg" : "aspect-square max-w-xs"
-                } w-full mx-auto overflow-hidden rounded-2xl border shadow-lg ${
-                  isDarkTheme ? "bg-zinc-900 border-white/10" : "bg-zinc-100 border-zinc-200"
-                }`}
-              >
-                {(event.square_banner_url || event.banner_url) ? (
-                  <img
-                    src={event.square_banner_url || event.banner_url}
-                    alt={event.title}
-                    className="h-full w-full object-cover object-center"
-                  />
-                ) : (
-                  <div className={`h-full w-full ${isDarkTheme ? "bg-zinc-900/60" : "bg-zinc-100"}`} />
-                )}
-              </div>
-            </div>
-
-            {/* Left Column: Event Information & Actions */}
-            <div className="lg:col-span-7 xl:col-span-6 space-y-7 order-2 lg:order-1">
+      {/* Main container: Centered max-width with clean, balanced, proportional spacing */}
+      <main className="relative z-10 flex-1 flex flex-col justify-between w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-16">
+        <div className="space-y-12 sm:space-y-14">
+          {/* 01. Hero Section (Clean, Structured, Minimal) */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-12 items-center">
+            {/* Left Column: Event Information & Primary Actions */}
+            <div className="lg:col-span-7 xl:col-span-7 space-y-6 order-2 lg:order-1">
               <h1
-                className={`text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight font-heading leading-[1.08] ${
+                className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight font-heading leading-[1.12] ${
                   isDarkTheme ? "text-white" : "text-zinc-950"
                 }`}
               >
                 {event.title}
               </h1>
 
-              {/* Action Button: Dedicated RSVP path navigation */}
-              <div className="flex items-center gap-3 pt-1">
+              {/* Action Button: Dedicated RSVP path navigation & Host Manage link */}
+              <div className="flex items-center gap-3 pt-0.5 flex-wrap">
+                {isHostOrAdmin(event) && (
+                  <Link
+                    href={`/console/events/${encodeURIComponent(event.slug || event.id)}/overview`}
+                    className={`inline-flex items-center justify-center gap-2 rounded-full h-10 px-5 text-xs font-semibold border transition active:scale-[0.98] cursor-pointer ${
+                      isDarkTheme
+                        ? "bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800"
+                        : "bg-white border-zinc-300 text-zinc-900 hover:bg-zinc-50 shadow-2xs"
+                    }`}
+                  >
+                    <span>Manage Event</span>
+                  </Link>
+                )}
+
                 {!event.tiers || event.tiers.length === 0 ? (
                   <span
-                    className={`inline-flex items-center justify-center rounded-full h-11 px-7 text-xs font-semibold select-none ${
+                    className={`inline-flex items-center justify-center rounded-full h-10 px-6 text-xs font-semibold select-none ${
                       isDarkTheme
                         ? "bg-zinc-800 text-zinc-400 border border-zinc-700/60"
                         : "bg-zinc-100 text-zinc-400 border border-zinc-200"
@@ -415,8 +441,8 @@ export default function EventDetailPageClient({
                   </span>
                 ) : (
                   <Link
-                    href={`/events/${id}/rsvp`}
-                    className={`inline-flex items-center justify-center gap-2 rounded-full h-11 px-7 text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
+                    href={`/events/${encodeURIComponent(event.slug || event.id)}/rsvp`}
+                    className={`inline-flex items-center justify-center gap-2 rounded-full h-10 px-6 text-xs font-semibold transition active:scale-[0.98] cursor-pointer ${
                       isDarkTheme
                         ? "bg-white text-zinc-950 shadow-md hover:bg-zinc-100"
                         : "bg-zinc-950 text-white shadow-md hover:bg-zinc-800"
@@ -428,6 +454,8 @@ export default function EventDetailPageClient({
                           ? "Application Submitted"
                           : existingRSVP.status === "WAITLIST"
                           ? "Waitlist Status"
+                          : existingRSVP.status === "BLOCKED"
+                          ? "Cancellation Pending"
                           : "My Ticket"
                         : isSoldOut
                         ? "Join Waitlist"
@@ -446,13 +474,9 @@ export default function EventDetailPageClient({
               >
                 {/* Date & Time */}
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      isDarkTheme ? "bg-zinc-800/80 text-zinc-300 border border-zinc-700/40" : "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                    }`}
-                  >
+                  <MetaIconBadge dark={isDarkTheme}>
                     <CalendarIcon size={15} />
-                  </div>
+                  </MetaIconBadge>
                   <div>
                     <span className={`font-semibold ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
                       {event.time_display || event.start_time || "Date to be announced"}
@@ -465,13 +489,9 @@ export default function EventDetailPageClient({
 
                 {/* Location */}
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      isDarkTheme ? "bg-zinc-800/80 text-zinc-300 border border-zinc-700/40" : "bg-zinc-100 text-zinc-600 border border-zinc-200"
-                    }`}
-                  >
+                  <MetaIconBadge dark={isDarkTheme}>
                     <MapPinIcon size={15} />
-                  </div>
+                  </MetaIconBadge>
                   <div>
                     <span className={`font-semibold ${isDarkTheme ? "text-white" : "text-zinc-950"}`}>
                       {event.location || "Venue announced after RSVP"}
@@ -485,7 +505,11 @@ export default function EventDetailPageClient({
                 {/* Channel / Host Attribution */}
                 {event.channel_name && (
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-zinc-700/50">
+                    <div
+                      className={`w-8 h-8 rounded-lg overflow-hidden shrink-0 border ${
+                        isDarkTheme ? "border-zinc-700/50" : "border-zinc-200"
+                      }`}
+                    >
                       {event.channel_avatar ? (
                         <img
                           src={event.channel_avatar}
@@ -520,12 +544,22 @@ export default function EventDetailPageClient({
               </div>
             </div>
 
-            {/* Right Column: Desktop Poster (Adapts to 16:9 and 1:1 ratios with ambient depth) */}
-            <div className="hidden lg:block lg:col-span-5 xl:col-span-6 order-2">
-              <div className="relative group w-full">
+            {/* Right Column: Hero Banner/Poster (Clean, Proportional, Minimal Bounded Container) */}
+            <div className="lg:col-span-5 xl:col-span-5 order-1 lg:order-2 flex justify-center lg:justify-end">
+              <div
+                className={`relative group w-full ${
+                  aspectRatio === "16/9"
+                    ? "max-w-md aspect-16/9"
+                    : "max-w-[340px] aspect-square"
+                } rounded-2xl overflow-hidden border ${
+                  isDarkTheme
+                    ? "bg-zinc-900 border-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.5),0_20px_44px_-18px_rgba(0,0,0,0.65)]"
+                    : "bg-zinc-100 border-zinc-200 shadow-[0_1px_2px_rgba(44,44,46,0.06),0_20px_44px_-18px_rgba(44,44,46,0.22)]"
+                }`}
+              >
                 {(event.banner_url || event.square_banner_url) && (
                   <div
-                    className="absolute -inset-1 rounded-2xl opacity-25 blur-xl pointer-events-none transition duration-500 group-hover:opacity-40"
+                    className="absolute -inset-1 rounded-2xl opacity-20 blur-lg pointer-events-none transition duration-500 group-hover:opacity-35"
                     style={{
                       backgroundImage: `url(${event.banner_url || event.square_banner_url})`,
                       backgroundSize: "cover",
@@ -533,23 +567,21 @@ export default function EventDetailPageClient({
                     aria-hidden="true"
                   />
                 )}
-                <div
-                  className={`${
-                    aspectRatio === "16/9" ? "aspect-16/9" : "aspect-square"
-                  } relative w-full overflow-hidden rounded-2xl border shadow-xl ${
-                    isDarkTheme ? "bg-zinc-900 border-white/10" : "bg-zinc-100 border-zinc-200"
-                  }`}
-                >
-                  {(event.banner_url || event.square_banner_url) ? (
-                    <img
-                      src={event.banner_url || event.square_banner_url}
-                      alt={event.title}
-                      className="h-full w-full object-cover object-center"
-                    />
-                  ) : (
-                    <div className={`h-full w-full ${isDarkTheme ? "bg-zinc-900/60" : "bg-zinc-100"}`} />
-                  )}
-                </div>
+                {(event.banner_url || event.square_banner_url) ? (
+                  <img
+                    src={event.banner_url || event.square_banner_url}
+                    alt={event.title}
+                    className="relative z-10 h-full w-full object-cover object-center"
+                  />
+                ) : (
+                  <div
+                    className={`relative z-10 h-full w-full flex items-center justify-center ${
+                      isDarkTheme ? "bg-zinc-900/60 text-zinc-700" : "bg-zinc-100 text-zinc-300"
+                    }`}
+                  >
+                    <SparklesIcon size={28} aria-hidden="true" />
+                  </div>
+                )}
               </div>
             </div>
           </section>
@@ -656,7 +688,11 @@ export default function EventDetailPageClient({
                         isDarkTheme ? "text-zinc-200" : "text-zinc-900"
                       }`}>
                         <span>{faq.question}</span>
-                        <span className="shrink-0 transition-transform group-open:rotate-45 text-lg leading-none text-zinc-500" aria-hidden="true">+</span>
+                        <PlusIcon
+                          size={16}
+                          className="shrink-0 transition-transform group-open:rotate-45 text-zinc-500"
+                          aria-hidden="true"
+                        />
                       </summary>
                       <p className={`mt-2.5 text-xs sm:text-sm leading-relaxed whitespace-pre-line ${isDarkTheme ? "text-zinc-400" : "text-zinc-600"}`}>
                         {faq.answer}

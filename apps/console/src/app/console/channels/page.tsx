@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { getStoredChannels, getStoredEvents } from "@/lib/api";
 import { Channel, EventItem } from "@/lib/types";
 import { PlusIcon, ArrowRightIcon, UsersGroupIcon, PresentationIcon } from "@/components/icons/hugeicons";
+import { webAppHref } from "@/lib/webAppUrl";
 
 export default function ConsoleChannelsPage() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function ConsoleChannelsPage() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/channels/create"
+            href={webAppHref("/channels/create")}
             className="inline-flex items-center gap-2 rounded-full bg-zinc-950 hover:bg-zinc-800 text-white px-5 py-2 text-xs font-semibold shadow-xs transition active:scale-[0.98] cursor-pointer"
           >
             <PlusIcon size={14} strokeWidth={2.5} />
@@ -103,7 +104,7 @@ export default function ConsoleChannelsPage() {
             Create your first community channel to establish a shared brand, publish recurring event drops, invite co-hosts, and cultivate an audience roster.
           </p>
           <Link
-            href="/channels/create"
+            href={webAppHref("/channels/create")}
             className="inline-flex items-center gap-2 rounded-full bg-zinc-950 hover:bg-zinc-800 text-white px-6 py-2.5 text-xs font-semibold transition cursor-pointer"
           >
             <PlusIcon size={14} strokeWidth={2.5} />
@@ -136,7 +137,7 @@ export default function ConsoleChannelsPage() {
                   {/* Public link pill */}
                   <div className="absolute top-2.5 right-2.5">
                     <Link
-                      href={`/channels/${ch.slug}`}
+                      href={webAppHref(`/channels/${ch.slug}`)}
                       target="_blank"
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-sm text-[10px] font-medium text-white transition"
                     >

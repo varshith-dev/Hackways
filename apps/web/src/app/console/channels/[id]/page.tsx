@@ -60,6 +60,8 @@ export default function ConsoleChannelManagePage() {
   const [memberEmail, setMemberEmail] = useState("");
   const [memberRole, setMemberRole] = useState<ChannelRole>("admin");
   const [submittingMember, setSubmittingMember] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [removingMember, setRemovingMember] = useState(false);
 
   // Settings State
   const [editName, setEditName] = useState("");
@@ -182,24 +184,31 @@ export default function ConsoleChannelManagePage() {
     }
   };
 
-  const handleRemoveMember = async (userId: string, name: string) => {
-    if (!channel) return;
-    if (!window.confirm(`Are you sure you want to remove ${name} from this community?`)) return;
+  const handlePromptRemoveMember = (userId: string, name: string) => {
+    setMemberToRemove({ id: userId, name });
+  };
+
+  const handleConfirmRemoveMember = async () => {
+    if (!channel || !memberToRemove) return;
     try {
-      const ok = await removeChannelMember(channel.id, userId);
+      setRemovingMember(true);
+      const ok = await removeChannelMember(channel.id, memberToRemove.id);
       if (ok) {
         setChannel((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
-            members: prev.members.filter((m) => m.user_id !== userId),
+            members: prev.members.filter((m) => m.user_id !== memberToRemove.id),
           };
         });
-        showToast(`Removed ${name}`);
+        showToast(`Removed ${memberToRemove.name}`);
+        setMemberToRemove(null);
         window.dispatchEvent(new Event("hackways_channels_updated"));
       }
     } catch {
       showToast("Failed to remove member.");
+    } finally {
+      setRemovingMember(false);
     }
   };
 
@@ -837,7 +846,7 @@ export default function ConsoleChannelManagePage() {
                       {member.role !== "owner" && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveMember(member.user_id, member.name)}
+                          onClick={() => handlePromptRemoveMember(member.user_id, member.name)}
                           className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 transition cursor-pointer"
                         >
                           Remove
@@ -1372,6 +1381,41 @@ export default function ConsoleChannelManagePage() {
                 className="rounded-full bg-rose-600 hover:bg-rose-700 text-white px-5 py-2 text-xs font-semibold shadow-xs transition disabled:opacity-40"
               >
                 {deleting ? "Deleting..." : "Permanently Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: REMOVE MEMBER (Zero Native Browser Popups) */}
+      {/* ========================================================================= */}
+      {memberToRemove && (
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-xl space-y-4 border border-zinc-200">
+            <div>
+              <h3 className="text-sm font-bold text-zinc-950 font-heading">Remove Member</h3>
+              <p className="text-xs text-zinc-500 mt-1">
+                Are you sure you want to remove <strong className="text-zinc-900">{memberToRemove.name}</strong> from this community?
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                onClick={() => setMemberToRemove(null)}
+                disabled={removingMember}
+                className="px-4 py-2 text-xs font-semibold text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={removingMember}
+                onClick={handleConfirmRemoveMember}
+                className="rounded-lg bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 text-xs font-semibold shadow-xs transition disabled:opacity-40 cursor-pointer"
+              >
+                {removingMember ? "Removing..." : "Remove Member"}
               </button>
             </div>
           </div>

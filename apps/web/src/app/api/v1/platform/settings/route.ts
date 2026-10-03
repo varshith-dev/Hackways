@@ -20,9 +20,24 @@ export async function GET(req: Request) {
       canManage: false,
     });
   }
+  const isSuperAdmin = session.role === "admin" && isSuperAdminEmail(session.email);
+  if (!isSuperAdmin) {
+    return NextResponse.json({
+      settings: {
+        platformFeePercent: typeof settings?.platformFeePercent === "number" ? settings.platformFeePercent : 4,
+        paymentGateways: {
+          razorpay: {
+            keyId: settings?.paymentGateways?.razorpay?.keyId || "",
+            enabled: Boolean(settings?.paymentGateways?.razorpay?.enabled),
+          },
+        },
+      },
+      canManage: false,
+    });
+  }
   return NextResponse.json({
     settings,
-    canManage: session.role === "admin" && isSuperAdminEmail(session.email),
+    canManage: true,
   });
 }
 

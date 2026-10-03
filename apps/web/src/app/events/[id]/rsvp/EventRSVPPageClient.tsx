@@ -29,10 +29,13 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Lock,
 } from "lucide-react";
+import { formatOrganizerDisplay } from "@/lib/userFormat";
 import { DuplicateRSVPNotice } from "@/components/feedback/DuplicateRSVPNotice";
 import { HorizontalEventPass } from "@/components/pass/HorizontalEventPass";
 import { RegistrationStatusCard } from "@/components/pass/RegistrationStatusCard";
+import { Modal } from "@/components/ui/Modal";
 
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -132,6 +135,8 @@ export default function EventRSVPPageClient({
   const [existingRSVP, setExistingRSVP] = useState<ExistingRSVPInfo | null>(null);
   const [forceShowForm, setForceShowForm] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelErrorMessage, setCancelErrorMessage] = useState<string | null>(null);
 
   // Stepper State
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -531,7 +536,9 @@ export default function EventRSVPPageClient({
     await executeRSVP();
   };
 
-  const handleCancelRSVP = async (rsvpId?: string) => {
+  const [pendingCancelId, setPendingCancelId] = useState<string>("");
+
+  const handlePromptCancel = (rsvpId?: string) => {
     const targetId =
       rsvpId ||
       activeRSVP?.attendee?.id ||
@@ -540,17 +547,27 @@ export default function EventRSVPPageClient({
       rsvpResult?.rsvp.id ||
       "";
     if (!targetId) return;
-    if (!confirm("Are you sure you want to request cancellation for this pass?")) return;
+    setPendingCancelId(targetId);
+    setCancelErrorMessage(null);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    const targetId = pendingCancelId;
+    if (!targetId) return;
     const ownerEmail = activeRSVP?.attendee?.email || rsvpResult?.rsvp.user_email || attendeeEmail.trim().toLowerCase();
     setIsCancelling(true);
+    setCancelErrorMessage(null);
     try {
       await cancelRSVP(targetId, ownerEmail);
+      setIsCancelModalOpen(false);
+      setPendingCancelId("");
       setExistingRSVP(null);
       setRsvpResult(null);
       setForceShowForm(true);
       refreshRSVP();
     } catch (err: any) {
-      alert(err?.message || "Failed to process cancellation request. Please try again.");
+      setCancelErrorMessage(err?.message || "Failed to process cancellation request. Please try again.");
     } finally {
       setIsCancelling(false);
     }
@@ -642,13 +659,13 @@ export default function EventRSVPPageClient({
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 sm:py-12">
         {/* Pass View or Form View */}
         {activeRSVP && activeRSVP.status !== "CANCELLED" && !forceShowForm ? (
-          activeRSVP.status === "CONFIRMED" || activeRSVP.status === "CHECKED_IN" ? (
+          activeRSVP.status === "CONFIRMED" || activeRSVP.status === "CHECKED_IN" || activeRSVP.status === "BLOCKED" ? (
             <HorizontalEventPass
               event={event}
               ticket={activeRSVP.ticket}
               attendee={activeRSVP.attendee}
               sequenceNo={activeRSVP.sequenceNo || 1}
-              onCancelRSVP={() => handleCancelRSVP()}
+              onCancelRSVP={() => handlePromptCancel()}
               isCancelling={isCancelling}
               onRegisterAnother={() => setForceShowForm(true)}
             />
@@ -660,34 +677,18 @@ export default function EventRSVPPageClient({
               attendee={activeRSVP.attendee}
               team={activeTeamResult || invitedTeam}
               onRefresh={refreshRSVP}
-              onCancelRSVP={() => handleCancelRSVP()}
+              onCancelRSVP={() => handlePromptCancel()}
               isCancelling={isCancelling}
             />
           )
         ) : (
           <>
-            {activeRSVP && activeRSVP.status !== "CANCELLED" && forceShowForm && (
-              <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 text-emerald-900 font-medium">
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                  <span>You have an existing pass registered for this event.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setForceShowForm(false)}
-                  className="font-semibold underline text-emerald-800 hover:text-emerald-950 self-start sm:self-auto cursor-pointer"
-                >
-                  View your pass
-                </button>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
               {/* Left Column: Event Context & Clean Summary */}
               <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
                 {/* Back to event link */}
                 <Link
-                  href={`/events/${id}`}
+                  href={`/events/${encodeURIComponent(event.slug || id)}`}
                   className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-950 transition"
                 >
                   <ArrowLeft size={13} />
@@ -750,7 +751,14 @@ export default function EventRSVPPageClient({
                     {(event.channel_name || (event.hosts && event.hosts.length > 0)) && (
                       <div className="flex items-center gap-2">
                         <Building size={14} className="text-zinc-400 shrink-0" />
-                        <span>Hosted by {event.channel_name || event.hosts?.[0]}</span>
+                        <span>
+                          Hosted by{" "}
+                          {formatOrganizerDisplay({
+                            channelName: event.channel_name,
+                            hostName: event.channel_name ? undefined : event.hosts?.[0],
+                            organizerId: event.organizer_id,
+                          })}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -768,7 +776,7 @@ export default function EventRSVPPageClient({
                       <div className="text-xs text-zinc-500">1x Admission</div>
                     </div>
                     {tierPriceCents > 0 && (
-                      <div className="font-mono font-semibold text-zinc-950">
+                      <div className="font-mono font-semibold tabular-nums text-zinc-950">
                         ₹{(tierPriceCents / 100).toFixed(2)}
                       </div>
                     )}
@@ -777,22 +785,23 @@ export default function EventRSVPPageClient({
                   {isPaidEvent && platformFeeCents > 0 && (
                     <div className="flex items-baseline justify-between text-xs text-zinc-500 pt-1">
                       <span>Platform fee ({platformFeePercent}%)</span>
-                      <span className="font-mono">₹{(platformFeeCents / 100).toFixed(2)}</span>
+                      <span className="font-mono tabular-nums">₹{(platformFeeCents / 100).toFixed(2)}</span>
                     </div>
                   )}
 
                   {isPaidEvent && (
                     <div className="flex items-baseline justify-between text-sm font-bold pt-3 border-t border-zinc-100 text-zinc-950">
                       <span>Total</span>
-                      <span className="font-mono text-base text-zinc-950">
+                      <span className="font-mono tabular-nums text-base text-zinc-950">
                         ₹{(totalPayableCents / 100).toFixed(2)}
                       </span>
                     </div>
                   )}
 
                   {isPaidEvent && (
-                    <div className="text-[11px] text-zinc-400 pt-1">
-                      Secured checkout via Razorpay
+                    <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 pt-1">
+                      <Lock size={10} className="shrink-0" aria-hidden="true" />
+                      <span>Secured checkout via Razorpay</span>
                     </div>
                   )}
                 </div>
@@ -828,8 +837,6 @@ export default function EventRSVPPageClient({
                         <span>{submitError}</span>
                       </div>
                     )}
-
-                    {duplicateNotice && <DuplicateRSVPNotice email={attendeeEmail} />}
 
                     {/* SECTION 1: Attendee Details */}
                     {currentStep.key === "details" && (
@@ -1153,6 +1160,49 @@ export default function EventRSVPPageClient({
           </>
         )}
       </main>
+
+      {/* Cancellation confirmation — shared Modal keeps Escape/backdrop/ARIA behavior consistent */}
+      <Modal
+        isOpen={isCancelModalOpen}
+        onClose={() => {
+          if (isCancelling) return;
+          setIsCancelModalOpen(false);
+          setCancelErrorMessage(null);
+        }}
+        title="Request cancellation"
+        description="Are you sure you want to request cancellation for this pass? Your reserved spot will be released."
+        width="sm"
+      >
+        <div className="space-y-4">
+          {cancelErrorMessage && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
+              {cancelErrorMessage}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-zinc-100">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCancelModalOpen(false);
+                setCancelErrorMessage(null);
+              }}
+              disabled={isCancelling}
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition cursor-pointer"
+            >
+              Keep Pass
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmCancel}
+              disabled={isCancelling}
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-50 cursor-pointer shadow-xs"
+            >
+              {isCancelling ? "Cancelling..." : "Request cancellation"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

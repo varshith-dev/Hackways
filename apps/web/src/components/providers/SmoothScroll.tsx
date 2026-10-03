@@ -4,34 +4,27 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 
 /**
- * Site-wide momentum scrolling (the "lenis.dev feel") — wheel and touch input
- * is eased toward its target over a few frames instead of jumping per tick.
- *
- * Lenis in its default configuration (no `wrapper`/`content` options) drives
- * the real `window` scroll position via requestAnimationFrame rather than
- * faking it with a transform on a content wrapper. That distinction matters
- * here specifically: this page's scroll reveals (.rise, TextAnimate
- * startOnView, TextReveal, the band burst) are native `animation-timeline:
- * view()` CSS, which tracks genuine scroll position. A transform-based
- * smooth-scroll library would desync those; this one doesn't, because the
- * browser still sees real scroll happening, just eased.
- *
- * Also carries the IntersectionObserver fallback for .rise on browsers
- * without animation-timeline: view() support (Firefox, older Safari): CSS
- * hides those elements and this toggles .is-visible as each one scrolls
- * into view, matching the native scroll-timeline reveal it stands in for.
- *
- * Renders nothing — this only attaches the scroll behaviour as a side effect,
- * so every page stays a server component; only this one small client leaf
- * exists to own the effect.
+ * High-performance Lenis.dev smooth scroll setup.
+ * Configured with responsive lerp easing and scroll-behavior de-confliction.
  */
 export default function SmoothScroll() {
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (window.location.pathname.startsWith("/console") || window.location.pathname.startsWith("/m/console")) return;
 
     const lenis = new Lenis({
-      duration: 1.1,
-      easing: (t: number) => 1 - Math.pow(1 - t, 3), // ease-out cubic
+      lerp: 0.1,
+      smoothWheel: true,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.2,
+      infinite: false,
+      prevent: (node) => {
+        return (
+          node.hasAttribute("data-lenis-prevent") ||
+          Boolean(node.closest?.("[data-lenis-prevent], .overflow-y-auto, [class*='overflow-y-auto']"))
+        );
+      },
     });
 
     let frameId: number;

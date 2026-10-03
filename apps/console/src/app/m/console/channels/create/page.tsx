@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { createChannel } from "@/lib/api";
 import { readImageFile } from "@/lib/imageUpload";
 import styles from "@/components/forms/CreationForm.module.css";
+import { webAppHref } from "@/lib/webAppUrl";
 
 // Same design as /channels/create — back goes to /m/console/channels (mobile console context).
 export default function MobileConsoleCreateCommunityPage() {
@@ -126,7 +127,7 @@ export default function MobileConsoleCreateCommunityPage() {
             </div>
           </fieldset>
 
-          {!isLoading && !user && <p className={styles.signIn}><Link href="/login?redirect=%2Fm%2Fconsole%2Fchannels%2Fcreate">Sign in</Link> to create your community.</p>}
+          {!isLoading && !user && <p className={styles.signIn}><Link href={webAppHref("/login?redirect=%2Fm%2Fconsole%2Fchannels%2Fcreate")}>Sign in</Link> to create your community.</p>}
           {submitError && <p className={styles.error} role="alert">{submitError}</p>}
           <div className={styles.actions}>
             <Link href={backHref} className={styles.cancel}>Cancel</Link>

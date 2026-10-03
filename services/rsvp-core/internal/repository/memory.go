@@ -154,7 +154,7 @@ func (m *MemoryRepository) GetTiersByEvent(ctx context.Context, eventID string) 
 
 // CreateRSVPAtomic atomically decrements tier remaining capacity.
 // Concurrency-safe: protected by m.mu.Lock().
-func (m *MemoryRepository) CreateRSVPAtomic(ctx context.Context, rsvp *domain.RSVP) (*domain.RSVP, int, error) {
+func (m *MemoryRepository) CreateRSVPAtomic(ctx context.Context, rsvp *domain.RSVP, force bool) (*domain.RSVP, int, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -168,11 +168,13 @@ func (m *MemoryRepository) CreateRSVPAtomic(ctx context.Context, rsvp *domain.RS
 		return nil, 0, domain.ErrTierNotFound
 	}
 
-	if tier.RemainingCapacity <= 0 {
+	if tier.RemainingCapacity <= 0 && !force {
 		return nil, 0, domain.ErrSoldOut
 	}
 
-	tier.RemainingCapacity--
+	if tier.RemainingCapacity > 0 {
+		tier.RemainingCapacity--
+	}
 	tier.UpdatedAt = time.Now()
 
 	if rsvp.ID == "" {

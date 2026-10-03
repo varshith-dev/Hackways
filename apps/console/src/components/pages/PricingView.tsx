@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import PublicSiteLayout from "@/components/layout/PublicSiteLayout";
 import { CheckIcon, ArrowRightIcon } from "@/components/icons/hugeicons";
+import { webAppHref } from "@/lib/webAppUrl";
 
 const FREE_FEATURES = [
   "Unlimited free RSVPs",
@@ -63,7 +64,7 @@ export function PricingView() {
 
               <div className="mt-10 pt-6 border-t border-zinc-100">
                 <Link
-                  href="/create"
+                  href={webAppHref("/create")}
                   className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-zinc-950 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 transition"
                 >
                   <span>Host a free event</span>
@@ -103,7 +104,7 @@ export function PricingView() {
 
               <div className="mt-10 pt-6 border-t border-zinc-100">
                 <Link
-                  href="/create"
+                  href={webAppHref("/create")}
                   className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-zinc-950 py-2.5 text-xs font-semibold text-white hover:bg-zinc-800 transition"
                 >
                   <span>Host a ticketed event</span>

@@ -6,9 +6,15 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import Logo3D from "@/components/ui/Logo3D";
 import styles from "./AppHeader.module.css";
 
-// apps/console is a separate app (different port/origin) with no shared
-// routing — organizers need a real cross-origin link, not a path inside this app.
-const CONSOLE_APP_URL = process.env.NEXT_PUBLIC_CONSOLE_URL || "http://localhost:3001";
+// In production, console is served under the same origin (hackways.me/console) via reverse proxy.
+// In development, it runs on port 3001.
+const CONSOLE_APP_URL =
+  process.env.NEXT_PUBLIC_CONSOLE_URL ||
+  (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
+    ? "/console"
+    : process.env.NODE_ENV === "production"
+    ? "/console"
+    : "http://localhost:3001");
 
 export interface AppHeaderProps {
   theme?: "light" | "dark";

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { serverStore, generateTicketCode } from "@/lib/serverStore";
 import { requireSession } from "@/lib/serverAuth";
 import { verifyRazorpayPayment } from "@/lib/razorpay";
+import { assertEventAccess, eventOwnerIds } from "@/lib/tenantAccess";
 
 export async function GET(req: Request) {
   const session = requireSession(req, ["organizer", "admin"]);
@@ -10,7 +11,21 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get("eventId") || undefined;
-    const orders = serverStore.getOrders(eventId);
+
+    if (eventId) {
+      const deny = assertEventAccess(session, serverStore.getEventById(eventId));
+      if (deny) return deny;
+      const orders = serverStore.getOrders(eventId);
+      return NextResponse.json({ orders, count: orders.length });
+    }
+
+    // No eventId used to mean every order on the platform, to any organizer —
+    // scope to events the caller owns/hosts; admin keeps the platform-wide view.
+    const orders = session.role === "admin"
+      ? serverStore.getOrders()
+      : serverStore.getEvents()
+          .filter((e) => eventOwnerIds(e).includes(session.sub))
+          .flatMap((e) => serverStore.getOrders(e.id));
     return NextResponse.json({ orders, count: orders.length });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to fetch orders" }, { status: 500 });
@@ -24,15 +39,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required order parameters" }, { status: 400 });
     }
 
+    const event = serverStore.getEventById(data.eventId);
+    const tier = event?.tiers?.find((t) => t.id === data.tierId || t.name === data.tierName);
+    const expectedTierCents = tier ? (tier.price_cents || 0) : 0;
+
     const amountCents = Math.round(Number(data.amount) * 100);
-    if (amountCents > 0) {
+    // If the tier requires payment, ensure client didn't tamper with amount to 0 or lower
+    if (expectedTierCents > 0 && amountCents < expectedTierCents) {
+      return NextResponse.json({ error: "Invalid order amount for this ticket tier." }, { status: 400 });
+    }
+
+    if (amountCents > 0 || expectedTierCents > 0) {
       const paymentId = data.transactionId;
       if (!paymentId) {
         return NextResponse.json({ error: "Payment reference is required for a paid order." }, { status: 402 });
       }
       const settings = serverStore.getSettings();
       const gw = settings.paymentGateways?.razorpay;
-      if (!gw?.keyId || !gw?.keySecret || !(await verifyRazorpayPayment(paymentId, amountCents, gw.keyId, gw.keySecret))) {
+      const verifyAmount = Math.max(amountCents, expectedTierCents);
+      if (!gw?.keyId || !gw?.keySecret || !(await verifyRazorpayPayment(paymentId, verifyAmount, gw.keyId, gw.keySecret))) {
         return NextResponse.json({ error: "Payment verification failed." }, { status: 402 });
       }
     }
