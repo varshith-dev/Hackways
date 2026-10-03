@@ -54,6 +54,7 @@ import { EventItem, EventTeam, EventStaffMember, MediaAsset, RSVPQuestion, Quest
 import { readImageFile } from "@/lib/imageUpload";
 
 import { WEB_APP_URL, webAppHref } from "@/lib/webAppUrl";
+import EventContextBar from "@/modules/event-operations/EventContextBar";
 
 export interface EventTicketTier {
   id: string;
@@ -93,6 +94,25 @@ export default function EventDashboardView({
   const isMPath = pathname?.startsWith("/m");
   const mobilePrefix = isMPath ? "/m" : "/mobile";
   const consoleBase = `${mobileView ? mobilePrefix : "/console"}/events/${encodeURIComponent(eventId)}`;
+  // Stateful in-memory active tab
+  const [currentTab, setCurrentTab] = useState<string>(activeTab || "overview");
+
+  useEffect(() => {
+    if (activeTab) setCurrentTab(activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const handleTabChange = (e: any) => {
+      if (e.detail?.tab && e.detail.tab !== currentTab) {
+        setCurrentTab(e.detail.tab);
+      }
+    };
+    window.addEventListener("hackways_event_tab_changed", handleTabChange);
+    return () => {
+      window.removeEventListener("hackways_event_tab_changed", handleTabChange);
+    };
+  }, [currentTab]);
+
   // Category sub-tabs within modules
   const [setupSubtab, setSetupSubtab] = useState<
     "basic" | "datetime" | "venue" | "page" | "content" | "seo" | "settings"
@@ -351,10 +371,10 @@ export default function EventDashboardView({
 
   // If user navigates to legacy /venue tab, redirect to overview
   useEffect(() => {
-    if (activeTab === "venue") {
+    if (currentTab === "venue") {
       router.replace(`${consoleBase}/overview`);
     }
-  }, [activeTab, consoleBase, router]);
+  }, [currentTab, consoleBase, router]);
 
   // Inline table editing state (No prompt/alert)
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
@@ -1462,60 +1482,20 @@ export default function EventDashboardView({
 
   return (
     <div className={mobileView ? mobileStyles.content : "space-y-6 max-w-6xl"} data-mobile-event-dashboard={mobileView || undefined}>
-      {activeTab === "overview" && mobileView && <MobileEventOverview event={event} registrations={totalTicketsSold} checkedIn={checkedInCount} remaining={ticketsRemaining} />}
+      {currentTab === "overview" && mobileView && <MobileEventOverview event={event} registrations={totalTicketsSold} checkedIn={checkedInCount} remaining={ticketsRemaining} />}
 
       {/* Omnipresent Event Dashboard Context Bar */}
       {!mobileView && (
-        <div className="flex items-center justify-between py-2 border-b border-zinc-100 mb-2">
-          <div className="flex items-center gap-2 text-xs font-heading">
-            <Link
-              href="/console/organizer/events"
-              className="inline-flex items-center gap-1.5 font-medium text-zinc-500 hover:text-zinc-950 transition"
-            >
-              <ArrowRightIcon size={12} className="rotate-180 text-zinc-400" />
-              <span>Organizer Console</span>
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <span className="font-semibold text-zinc-900 truncate max-w-[240px]">
-              {event?.title || event?.slug || eventId}
-            </span>
-            <span className="text-zinc-300">/</span>
-            <span className="capitalize text-zinc-500 font-mono text-[11px] bg-zinc-100 px-2 py-0.5 rounded">
-              {activeTab}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href={webAppHref(`/events/${encodeURIComponent(event?.slug || eventId)}`)}
-              target="_blank"
-              className="text-xs font-medium text-zinc-600 hover:text-zinc-950 inline-flex items-center gap-1 transition"
-            >
-              <span>Live Public Page</span>
-              <ArrowRightIcon size={11} className="-rotate-45 text-zinc-400" />
-            </Link>
-          </div>
-        </div>
+        <EventContextBar event={event} eventId={eventId} activeTab={currentTab} />
       )}
       {/* ------------------------------------------------------------------ */}
       {/* 1. OVERVIEW                                                        */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "overview" && !mobileView && (
+      {currentTab === "overview" && !mobileView && (
         <div className="space-y-6">
           {/* Header Card */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-zinc-200/80 pb-6">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Link
-                  href="/console/organizer/events"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-950 transition"
-                >
-                  <ArrowRightIcon size={12} className="rotate-180 text-zinc-400" />
-                  <span>All Events</span>
-                </Link>
-                <span className="text-zinc-300">/</span>
-                <span className="text-xs text-zinc-400 font-mono truncate max-w-[200px]">{event?.slug || eventId}</span>
-              </div>
               <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
                 <span>
                   {event?.time_display ||
@@ -1693,28 +1673,10 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 2. EVENT SETUP                                                     */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "setup" && (
+      {currentTab === "setup" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Link
-                  href="/console/organizer/events"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-950 transition"
-                >
-                  <ArrowRightIcon size={12} className="rotate-180 text-zinc-400" />
-                  <span>All Events</span>
-                </Link>
-                <span className="text-zinc-300">/</span>
-                <Link
-                  href={`/console/events/${encodeURIComponent(event?.slug || eventId)}/overview`}
-                  className="text-xs font-medium text-zinc-600 hover:text-zinc-950 transition truncate max-w-[200px]"
-                >
-                  {event?.title || event?.slug || eventId}
-                </Link>
-                <span className="text-zinc-300">/</span>
-                <span className="text-xs text-zinc-400 font-mono">Setup</span>
-              </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 font-heading">
                 Event Setup & Details
               </h1>
@@ -2724,7 +2686,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 3. TICKETS                                                         */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "tickets" && (
+      {currentTab === "tickets" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -3477,7 +3439,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 4. ORDERS                                                          */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "orders" && (
+      {currentTab === "orders" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -3599,7 +3561,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 5. ATTENDEES                                                       */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "attendees" && (
+      {currentTab === "attendees" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -3948,7 +3910,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 5B. TEAMS & SQUADS                                                 */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "teams" && (
+      {currentTab === "teams" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -4134,7 +4096,7 @@ export default function EventDashboardView({
       )}
       {/* 6. CHECK-IN                                                        */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "check-in" && (
+      {currentTab === "check-in" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -4301,7 +4263,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 8. MARKETING                                                       */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "marketing" && (
+      {currentTab === "marketing" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 font-heading">
@@ -4329,7 +4291,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 9. COMMUNICATIONS                                                 */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "communications" && (
+      {currentTab === "communications" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 font-heading">
@@ -4370,7 +4332,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 10. STAFF                                                          */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "staff" && (() => {
+      {currentTab === "staff" && (() => {
         const staffList: EventStaffMember[] = (event?.staff_members && event.staff_members.length > 0)
           ? event.staff_members
           : [
@@ -4484,7 +4446,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 11. FINANCE                                                        */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "finance" && (
+      {currentTab === "finance" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -4592,7 +4554,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 12. ANALYTICS                                                      */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "analytics" && (() => {
+      {currentTab === "analytics" && (() => {
         const now = Date.now();
         const views24h = recordedViews.filter(
           (v) => now - new Date(v.timestamp).getTime() <= 24 * 3600 * 1000
@@ -4899,7 +4861,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 13. INTEGRATIONS                                                   */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "integrations" && (
+      {currentTab === "integrations" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 font-heading">
@@ -4959,7 +4921,7 @@ export default function EventDashboardView({
       {/* ------------------------------------------------------------------ */}
       {/* 14. SETTINGS                                                       */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab === "settings" && (
+      {currentTab === "settings" && (
         <div className="space-y-6">
           <div className="border-b border-zinc-200/80 pb-6">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 font-heading">

@@ -16,15 +16,13 @@ export default async function OrganizerPage() {
   }
 
   const allEvents = serverStore.getEvents();
-  // Filter events: Organizers only see their own events. Super admin sees all only in super admin view,
-  // or sees their owned events when viewing the organizer console.
-  const myEvents = session.role === "admin"
-    ? allEvents
-    : allEvents.filter((e) =>
-        eventOwnerIds(e).includes(session.sub) ||
-        (e.organizer_id && (e.organizer_id === session.sub || e.organizer_id.toLowerCase() === session.email.toLowerCase())) ||
-        (e.hosts && e.hosts.some((h) => h === session.sub || h.toLowerCase() === session.email.toLowerCase()))
-      );
+  // Filter events: Organizers strictly see only their own events.
+  const myEvents = allEvents.filter((e) =>
+    eventOwnerIds(e).includes(session.sub) ||
+    (e.organizer_id && (e.organizer_id === session.sub || e.organizer_id.toLowerCase() === session.email.toLowerCase())) ||
+    (e.hosts && e.hosts.some((h) => h === session.sub || h.toLowerCase() === session.email.toLowerCase())) ||
+    (e.host_users && e.host_users.some((h) => h.user_id === session.sub || (session.email && h.email?.toLowerCase() === session.email.toLowerCase())))
+  );
 
   const ownedEventIds = new Set(myEvents.map((e) => e.id));
   const initialOrders = serverStore.getOrders().filter((o) => ownedEventIds.has(o.eventId));

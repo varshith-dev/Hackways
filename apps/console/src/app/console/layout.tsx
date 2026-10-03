@@ -15,6 +15,7 @@ import {
   FilterIcon,
   UserIcon,
   PlusIcon,
+  ArrowRightIcon,
 } from "@/components/icons/hugeicons";
 import Logo3D from "@/components/ui/Logo3D";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -31,11 +32,13 @@ import { PageSkeleton } from "@/components/ui/Skeleton";
 import { getStoredEvents, getStoredChannels } from "@/lib/api";
 import { EventItem, Channel } from "@/lib/types";
 import { webAppHref } from "@/lib/webAppUrl";
+import { useSyncStatus } from "@/hooks/useSyncStatus";
 
 interface SubItem {
   name: string;
   href: string;
   icon: React.ReactNode;
+  tabKey?: string;
 }
 
 interface ParentItem {
@@ -127,6 +130,15 @@ export default function ConsoleLayout({
     );
   }
 
+  // While validating ownership on mount, show clean skeleton without rendering sidebars
+  if (user && !isAdmin && hasEventOrCommunity === null && !pathname.startsWith("/console/start")) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#fafafa]">
+        <PageSkeleton rows={4} />
+      </div>
+    );
+  }
+
   // Must own an event or a community to access the console
   if (user && hasEventOrCommunity === false && !pathname.startsWith("/console/start")) {
     return (
@@ -175,6 +187,48 @@ export default function ConsoleLayout({
   }
 
   return <DesktopConsoleLayout>{children}</DesktopConsoleLayout>;
+}
+
+function HeaderSyncIndicator() {
+  const { status, pendingCount, triggerSync } = useSyncStatus();
+
+  if (status === "syncing") {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-mono border border-blue-200 select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+        <span>Syncing...</span>
+      </div>
+    );
+  }
+
+  if (status === "offline") {
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-[11px] font-mono border border-amber-200 select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+        <span>Offline {pendingCount > 0 ? `(${pendingCount} queued)` : ""}</span>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <button
+        type="button"
+        onClick={triggerSync}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-700 text-[11px] font-mono border border-red-200 hover:bg-red-100 transition select-none cursor-pointer"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+        <span>Sync Error (Retry)</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-mono border border-emerald-200 select-none">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+      <span>Synced</span>
+    </div>
+  );
 }
 
 function DesktopConsoleLayout({
@@ -353,19 +407,19 @@ function DesktopConsoleLayout({
       return {
         title: "EVENT OPERATIONS",
         items: [
-          { name: "Overview", href: `/console/events/${eventId}/overview`, icon: <BarChartIcon size={18} /> },
-          { name: "Event Setup", href: `/console/events/${eventId}/setup`, icon: <PresentationIcon size={18} /> },
-          { name: "Tickets & Tiers", href: `/console/events/${eventId}/tickets`, icon: <TicketIcon size={18} /> },
-          { name: "Orders", href: `/console/events/${eventId}/orders`, icon: <BarChartIcon size={18} /> },
-          { name: "Attendees", href: `/console/events/${eventId}/attendees`, icon: <UsersGroupIcon size={18} /> },
-          { name: "Teams & Squads", href: `/console/events/${eventId}/teams`, icon: <UsersGroupIcon size={18} /> },
-          { name: "Turnstile Check-in", href: `/console/events/${eventId}/check-in`, icon: <QrCodeIcon size={18} /> },
-          { name: "Marketing", href: `/console/events/${eventId}/marketing`, icon: <FilterIcon size={18} /> },
-          { name: "Communications", href: `/console/events/${eventId}/communications`, icon: <RefreshCwIcon size={18} /> },
-          { name: "Staff & Scanners", href: `/console/events/${eventId}/staff`, icon: <UserIcon size={18} /> },
-          { name: "Finance & Ledger", href: `/console/events/${eventId}/finance`, icon: <LockIcon size={18} /> },
-          { name: "Analytics", href: `/console/events/${eventId}/analytics`, icon: <BarChartIcon size={18} /> },
-          { name: "Settings", href: `/console/events/${eventId}/settings`, icon: <RefreshCwIcon size={18} /> },
+          { name: "Overview", href: `/console/events/${eventId}/overview`, icon: <BarChartIcon size={18} />, tabKey: "overview" },
+          { name: "Event Setup", href: `/console/events/${eventId}/setup`, icon: <PresentationIcon size={18} />, tabKey: "setup" },
+          { name: "Tickets & Tiers", href: `/console/events/${eventId}/tickets`, icon: <TicketIcon size={18} />, tabKey: "tickets" },
+          { name: "Orders", href: `/console/events/${eventId}/orders`, icon: <BarChartIcon size={18} />, tabKey: "orders" },
+          { name: "Attendees", href: `/console/events/${eventId}/attendees`, icon: <UsersGroupIcon size={18} />, tabKey: "attendees" },
+          { name: "Teams & Squads", href: `/console/events/${eventId}/teams`, icon: <UsersGroupIcon size={18} />, tabKey: "teams" },
+          { name: "Turnstile Check-in", href: `/console/events/${eventId}/check-in`, icon: <QrCodeIcon size={18} />, tabKey: "check-in" },
+          { name: "Marketing", href: `/console/events/${eventId}/marketing`, icon: <FilterIcon size={18} />, tabKey: "marketing" },
+          { name: "Communications", href: `/console/events/${eventId}/communications`, icon: <RefreshCwIcon size={18} />, tabKey: "communications" },
+          { name: "Staff & Scanners", href: `/console/events/${eventId}/staff`, icon: <UserIcon size={18} />, tabKey: "staff" },
+          { name: "Finance & Ledger", href: `/console/events/${eventId}/finance`, icon: <LockIcon size={18} />, tabKey: "finance" },
+          { name: "Analytics", href: `/console/events/${eventId}/analytics`, icon: <BarChartIcon size={18} />, tabKey: "analytics" },
+          { name: "Settings", href: `/console/events/${eventId}/settings`, icon: <RefreshCwIcon size={18} />, tabKey: "settings" },
         ],
       };
     }
@@ -428,55 +482,51 @@ function DesktopConsoleLayout({
     <SidebarProvider>
       <div className="h-screen bg-white text-zinc-900 selection:bg-zinc-900 selection:text-white flex flex-col font-body antialiased overflow-hidden">
         {/* Top Header Bar: Clean White, Fixed at Top */}
-        <header className="h-16 shrink-0 border-b border-[#e8eaed] bg-white px-4 sm:px-6 flex items-center justify-between z-50">
-          <div className="flex items-center gap-4">
+        <header className="h-16 shrink-0 border-b border-[#e8eaed] bg-white px-4 sm:px-6 flex items-center justify-between z-50 select-none">
+          <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center group py-1" aria-label="Hackways Home">
               <Logo3D />
             </Link>
             <span className="hidden sm:inline-block text-[#dadce0]">/</span>
             <span className="text-xs font-semibold text-[#5f6368] tracking-wider uppercase font-heading">
-              Console
+              {isSuperAdminContext
+                ? "Platform Admin"
+                : pathname.startsWith("/console/events")
+                ? "Event Workspace"
+                : pathname.startsWith("/console/channels")
+                ? "Communities"
+                : "Organizer Console"}
             </span>
             <SidebarTrigger />
           </div>
 
-          {/* Right Actions: Dashboard Role Switcher */}
+          {/* Right Actions: Header Sync Indicator & Context Switchers */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <select
-                value={currentRole}
-                onChange={(e) => handleRoleChange(e.target.value)}
-                className="bg-white border border-zinc-200 rounded-md px-3 py-1.5 text-xs font-medium text-zinc-900 shadow-2xs hover:border-zinc-400 focus:outline-none focus:border-zinc-900 cursor-pointer transition"
-                aria-label="Switch Console"
+            <HeaderSyncIndicator />
+
+            {/* Platform Admin context: Provide explicit jump to Organizer Console */}
+            {isSuperAdminContext && (
+              <button
+                type="button"
+                onClick={() => router.push("/console/organizer/overview")}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-950 border border-zinc-200 rounded-md hover:bg-zinc-50 transition cursor-pointer"
               >
-                {(isAdmin
-                  ? [
-                      { value: "super_admin", label: "Super Admin" },
-                      { value: "users", label: "User Management" },
-                      { value: "kpi", label: "Platform Analytics" },
-                      { value: "organizer", label: "Organizer Console" },
-                      { value: "channels", label: "Communities" },
-                    ]
-                  : [
-                      { value: "organizer", label: "Organizer Console" },
-                      { value: "marketing", label: "Marketing" },
-                      { value: "checkin", label: "Door Check-in" },
-                      { value: "finance", label: "Payouts" },
-                      { value: "team", label: "Co-Organizer" },
-                      { value: "channels", label: "Communities" },
-                    ]
-                )
-                  .filter((o) => {
-                    if (o.value === "super_admin" || o.value === "users" || o.value === "kpi") {
-                      return isAdmin;
-                    }
-                    return moduleAllowed(o.value);
-                  })
-                  .map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-              </select>
-            </div>
+                <span>Organizer Console</span>
+                <ArrowRightIcon size={12} />
+              </button>
+            )}
+
+            {/* Organizer context for Admins: Provide explicit jump to Platform Admin */}
+            {!isSuperAdminContext && isAdmin && (
+              <button
+                type="button"
+                onClick={() => router.push("/console/super-admin/overview")}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-950 border border-zinc-200 rounded-md hover:bg-zinc-50 transition cursor-pointer"
+              >
+                <span>Platform Admin</span>
+                <ArrowRightIcon size={12} />
+              </button>
+            )}
 
             {/* Mobile menu button */}
             <button
@@ -514,7 +564,36 @@ function DesktopConsoleLayout({
               </div>
               <nav className="space-y-0.5">
                 {(subPanel ? subPanel.items : parentSections).map((item) => {
+                  const hasTab = "tabKey" in item && !!(item as any).tabKey;
                   const isActive = pathname === item.href;
+
+                  if (hasTab) {
+                    return (
+                      <button
+                        key={item.name}
+                        type="button"
+                        role="tab"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          window.dispatchEvent(
+                            new CustomEvent("hackways_event_tab_changed", { detail: { tab: (item as any).tabKey } })
+                          );
+                          window.history.replaceState(null, "", item.href);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-1.5 text-[13px] rounded-md transition-colors text-left ${
+                          isActive
+                            ? "bg-zinc-100 text-zinc-950 font-semibold"
+                            : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 font-normal"
+                        }`}
+                      >
+                        <span className={isActive ? "text-zinc-950" : "text-zinc-400"}>
+                          {item.icon}
+                        </span>
+                        <span className="truncate">{item.name}</span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.name}
@@ -628,6 +707,25 @@ function TwoColumnSidebar({
 }) {
   const { collapsed } = useSidebar();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [activeEventTab, setActiveEventTab] = useState<string>(() => {
+    const match = pathname.match(/^\/console\/events\/[^\/]+\/([^\/]+)/);
+    return match ? match[1] : "overview";
+  });
+
+  useEffect(() => {
+    const match = pathname.match(/^\/console\/events\/[^\/]+\/([^\/]+)/);
+    if (match) setActiveEventTab(match[1]);
+
+    const handleTabChange = (e: any) => {
+      if (e.detail?.tab) {
+        setActiveEventTab(e.detail.tab);
+      }
+    };
+    window.addEventListener("hackways_event_tab_changed", handleTabChange);
+    return () => {
+      window.removeEventListener("hackways_event_tab_changed", handleTabChange);
+    };
+  }, [pathname]);
 
   return (
     <div className="relative hidden lg:flex shrink-0 h-full border-r border-[#e8eaed] bg-white select-none">
@@ -789,9 +887,42 @@ function TwoColumnSidebar({
             {/* Sub navigation items */}
             <nav className="space-y-1">
               {subPanel.items.map((sub) => {
-                const isSubActive =
-                  pathname === sub.href ||
-                  (pathname.startsWith(sub.href) && sub.href !== "/console/finance" && sub.href !== "/console/super-admin" && sub.href !== "/console/organizer");
+                const isSubActive = sub.tabKey
+                  ? activeEventTab === sub.tabKey
+                  : pathname === sub.href ||
+                    (pathname.startsWith(sub.href) &&
+                      sub.href !== "/console/finance" &&
+                      sub.href !== "/console/super-admin" &&
+                      sub.href !== "/console/organizer");
+
+                if (sub.tabKey) {
+                  return (
+                    <button
+                      key={sub.name}
+                      type="button"
+                      role="tab"
+                      aria-selected={isSubActive}
+                      onClick={() => {
+                        setActiveEventTab(sub.tabKey!);
+                        window.dispatchEvent(
+                          new CustomEvent("hackways_event_tab_changed", { detail: { tab: sub.tabKey } })
+                        );
+                        window.history.replaceState(null, "", sub.href);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors text-left cursor-pointer ${
+                        isSubActive
+                          ? "bg-zinc-100 text-zinc-950 font-semibold shadow-2xs"
+                          : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/70 font-medium"
+                      }`}
+                    >
+                      <span className={`shrink-0 ${isSubActive ? "text-zinc-950" : "text-zinc-400"}`}>
+                        {sub.icon}
+                      </span>
+                      <span className="truncate">{sub.name}</span>
+                    </button>
+                  );
+                }
+
                 return (
                   <Link
                     key={sub.name}

@@ -161,13 +161,13 @@ export default function OrganizerView({
   const { settings: platformSettings } = usePlatformSettings();
   const platformFeePct = platformSettings?.platformFeePercent ?? 3;
 
-  // State collections initialized synchronously from server props or local store
+  // State collections initialized synchronously from server props or filtered local store
   const [eventsList, setEventsList] = useState<OrganizerEventRecord[]>(() => {
-    const source = initialEvents || (typeof window !== "undefined" ? getStoredEvents() : []);
-    return source.map(mapEventToOrganizerRecord);
+    if (initialEvents) return initialEvents.map(mapEventToOrganizerRecord);
+    return [];
   });
-  const [orders, setOrders] = useState<any[]>(() => initialOrders || (typeof window !== "undefined" ? getAllOrders() : []));
-  const [attendees, setAttendees] = useState<any[]>(() => initialAttendees || (typeof window !== "undefined" ? getAllAttendees() : []));
+  const [orders, setOrders] = useState<any[]>(() => initialOrders || []);
+  const [attendees, setAttendees] = useState<any[]>(() => initialAttendees || []);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [promos, setPromos] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<OrganizerStaffMember[]>(INITIAL_ORGANIZER_STAFF);
@@ -177,21 +177,19 @@ export default function OrganizerView({
       const stored = getStoredEvents();
       const userEmail = (user?.email || "").toLowerCase();
       const userId = user?.userId;
-      const isAdmin = user?.role === "admin";
 
-      const filtered = isAdmin
-        ? stored
-        : stored.filter((e) =>
-            (userId && e.organizer_id === userId) ||
-            (userEmail && e.organizer_id && e.organizer_id.toLowerCase() === userEmail) ||
-            (e.hosts && e.hosts.some((h) => (userId && h === userId) || (userEmail && h.toLowerCase() === userEmail))) ||
-            (e.host_users && e.host_users.some((h) => (userId && h.user_id === userId) || (userEmail && h.email?.toLowerCase() === userEmail)))
-          );
+      // In Organizer Console, organizers strictly view their own events, even if their account is an admin
+      const filtered = stored.filter((e) =>
+        (userId && e.organizer_id === userId) ||
+        (userEmail && e.organizer_id && e.organizer_id.toLowerCase() === userEmail) ||
+        (e.hosts && e.hosts.some((h) => (userId && h === userId) || (userEmail && h.toLowerCase() === userEmail))) ||
+        (e.host_users && e.host_users.some((h) => (userId && h.user_id === userId) || (userEmail && h.email?.toLowerCase() === userEmail)))
+      );
 
       const ownedIds = new Set(filtered.map((e) => e.id));
       setEventsList(filtered.map(mapEventToOrganizerRecord));
-      setOrders((getAllOrders() as any[]).filter((o) => isAdmin || ownedIds.has(o.eventId)));
-      setAttendees((getAllAttendees() as any[]).filter((a) => isAdmin || ownedIds.has(a.eventId)));
+      setOrders((getAllOrders() as any[]).filter((o) => ownedIds.has(o.eventId)));
+      setAttendees((getAllAttendees() as any[]).filter((a) => ownedIds.has(a.eventId)));
       if (typeof window !== "undefined") {
         setConditionalQuestionsFeature(localStorage.getItem("hackways_feature_conditional_questions") === "true");
         const storedTeam = localStorage.getItem("hackways_organizer_team");
