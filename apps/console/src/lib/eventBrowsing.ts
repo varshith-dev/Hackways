@@ -45,7 +45,8 @@ export function isEventHost(event: EventItem, user: UserSession): boolean {
 export function eventPrice(event: EventItem): string {
   if (event.status === "CANCELLED") return "Cancelled";
   if (event.status === "DRAFT") return "Draft";
-  if (event.status === "SOLD_OUT" || (event.tiers.length > 0 && event.tiers.every((tier) => tier.remaining_capacity <= 0))) return "Sold out";
+  const cappedTiers = event.tiers.filter((tier) => (tier.total_capacity || 0) > 0);
+  if (event.status === "SOLD_OUT" || (cappedTiers.length > 0 && cappedTiers.length === event.tiers.length && cappedTiers.every((tier) => (tier.remaining_capacity ?? 0) <= 0))) return "Sold out";
   if (!event.tiers.length) return "Details soon";
   if (event.tiers.some((tier) => tier.price_cents === undefined || !Number.isFinite(tier.price_cents) || tier.price_cents < 0)) {
     return "See ticket details";

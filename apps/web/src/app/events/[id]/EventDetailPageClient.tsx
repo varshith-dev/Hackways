@@ -386,19 +386,7 @@ export default function EventDetailPageClient({
                     className="h-full w-full object-cover object-center"
                   />
                 ) : (
-                  <div className="h-full w-full flex flex-col justify-between p-5 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 text-white relative overflow-hidden">
-                    <div className="flex items-center justify-between text-zinc-400">
-                      <span className="text-[10px] font-mono uppercase tracking-widest">Hackways</span>
-                      <TicketIcon size={14} className="text-zinc-500" />
-                    </div>
-                    <div>
-                      <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-xs mb-2">
-                        {event.title.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="text-sm font-bold font-heading line-clamp-1">{event.title}</div>
-                      <div className="text-[11px] text-zinc-400 mt-0.5">{event.time_display || event.start_time || "Upcoming"}</div>
-                    </div>
-                  </div>
+                  <div className={`h-full w-full ${isDarkTheme ? "bg-zinc-900/60" : "bg-zinc-100"}`} />
                 )}
               </div>
             </div>
@@ -559,24 +547,7 @@ export default function EventDetailPageClient({
                       className="h-full w-full object-cover object-center"
                     />
                   ) : (
-                    <div className="h-full w-full flex flex-col justify-between p-8 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 text-white relative overflow-hidden">
-                      <div className="absolute inset-0 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
-                      <div className="relative z-10 flex items-center justify-between text-zinc-400">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-400">Hackways Event</span>
-                        <TicketIcon size={16} className="text-zinc-500" />
-                      </div>
-                      <div className="relative z-10 space-y-2">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700/80 flex items-center justify-center font-bold text-sm text-white shadow-inner">
-                          {event.title.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="text-base font-bold font-heading line-clamp-2 leading-snug">
-                          {event.title}
-                        </div>
-                        <div className="text-xs text-zinc-400">
-                          {event.time_display || event.start_time || "Date to be announced"}
-                        </div>
-                      </div>
-                    </div>
+                    <div className={`h-full w-full ${isDarkTheme ? "bg-zinc-900/60" : "bg-zinc-100"}`} />
                   )}
                 </div>
               </div>

@@ -215,7 +215,7 @@ export default function EventDashboardView({
         available: t.remaining_capacity ?? t.total_capacity,
         salesStart: ev.start_time?.split("T")[0] || new Date().toISOString().split("T")[0],
         salesEnd: ev.start_time?.split("T")[0] || "",
-        status: (t.remaining_capacity ?? t.total_capacity) <= 0 ? "SOLD_OUT" : "ACTIVE",
+        status: (t.total_capacity > 0 && (t.remaining_capacity ?? t.total_capacity) <= 0) ? "SOLD_OUT" : "ACTIVE",
         approvalMode: t.approval_mode || "AUTO_APPROVE",
       }));
     }
@@ -305,7 +305,7 @@ export default function EventDashboardView({
               available: t.remaining_capacity ?? t.total_capacity,
               salesStart: ev.start_time?.split("T")[0] || new Date().toISOString().split("T")[0],
               salesEnd: ev.start_time?.split("T")[0] || "",
-              status: (t.remaining_capacity ?? t.total_capacity) <= 0 ? "SOLD_OUT" : "ACTIVE",
+              status: (t.total_capacity > 0 && (t.remaining_capacity ?? t.total_capacity) <= 0) ? "SOLD_OUT" : "ACTIVE",
               approvalMode: t.approval_mode || "AUTO_APPROVE",
             }))
           );
@@ -3258,9 +3258,9 @@ export default function EventDashboardView({
                             `INR ${t.price.toLocaleString()}`
                           )}
                         </td>
-                        <td className="py-3 px-4 text-zinc-600 tabular-nums font-body">{t.inventory}</td>
+                        <td className="py-3 px-4 text-zinc-600 tabular-nums font-body">{t.inventory > 0 ? t.inventory : "—"}</td>
                         <td className="py-3 px-4 font-semibold text-zinc-900 tabular-nums font-body">{t.sold}</td>
-                        <td className="py-3 px-4 text-zinc-600 tabular-nums font-body">{t.available}</td>
+                        <td className="py-3 px-4 text-zinc-600 tabular-nums font-body">{t.inventory > 0 ? t.available : "—"}</td>
                         <td className="py-3 px-4 text-zinc-500 text-[11px] font-body">
                           {t.salesStart} - {t.salesEnd}
                         </td>
@@ -3269,6 +3269,8 @@ export default function EventDashboardView({
                             className={`px-2 py-0.5 rounded text-[10px] font-bold font-heading ${
                               t.status === "DISABLED"
                                 ? "bg-zinc-200 text-zinc-700"
+                                : t.status === "SOLD_OUT"
+                                ? "bg-red-100 text-red-700"
                                 : "bg-zinc-100 text-zinc-900"
                             }`}
                           >
