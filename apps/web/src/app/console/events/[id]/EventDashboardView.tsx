@@ -40,6 +40,7 @@ import {
   getEvent,
   getEventSync,
   saveEvent,
+  saveEventAsync,
   deleteEvent,
   getEventAttendees,
   getAllOrders,
@@ -55,6 +56,12 @@ import {
 } from "@/lib/api";
 import { EventItem, EventTeam, EventStaffMember, MediaAsset, RSVPQuestion, QuestionType, TicketApprovalMode, EventScheduleItem, EventFaq, EventPageTheme } from "@/lib/types";
 import { readImageFile } from "@/lib/imageUpload";
+
+// apps/console has no public-facing event page of its own — the live event
+// page only exists in apps/web — so any link off this dashboard to the
+// public URL must cross over to that app instead of staying relative.
+const WEB_APP_URL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3000";
+
 export interface EventTicketTier {
   id: string;
   name: string;
@@ -194,6 +201,8 @@ export default function EventDashboardView({
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [isUploadingSquareBanner, setIsUploadingSquareBanner] = useState(false);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [isSavingSetup, setIsSavingSetup] = useState(false);
+  const [isSavingTier, setIsSavingTier] = useState(false);
   const [isCustomUrlOpen, setIsCustomUrlOpen] = useState(false);
   const [isCustomSquareUrlOpen, setIsCustomSquareUrlOpen] = useState(false);
 
@@ -551,9 +560,10 @@ export default function EventDashboardView({
     setIsTierDrawerOpen(true);
   };
 
-  const handleSaveTierFromDrawer = (e: React.FormEvent) => {
+  const handleSaveTierFromDrawer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tierDrawerName.trim()) return;
+    if (!tierDrawerName.trim() || isSavingTier) return;
+    setIsSavingTier(true);
     const priceNum = tierDrawerIsPaid ? Math.max(0, Number(tierDrawerPrice) || 0) : 0;
     const capNum = Number(tierDrawerCap) > 0 ? Math.floor(Number(tierDrawerCap)) : 0;
     const startStr = tierDrawerSalesStart || new Date().toISOString().split("T")[0];
@@ -621,9 +631,15 @@ export default function EventDashboardView({
       total_capacity: nextTiers.reduce((s, t) => s + t.inventory, 0),
       custom_questions: customQuestions,
     };
-    saveEvent(updated);
-    setEvent(updated);
-    setIsTierDrawerOpen(false);
+    try {
+      await saveEventAsync(updated);
+      setEvent(updated);
+    } catch (err: any) {
+      showToast(err.message || "Failed to sync tier changes.");
+    } finally {
+      setIsSavingTier(false);
+      setIsTierDrawerOpen(false);
+    }
   };
 
   const handleDuplicateTier = (tierId: string) => {
@@ -902,10 +918,14 @@ export default function EventDashboardView({
   // event record enough to crash SSR.
   const handleBannerFileUpload = async (file: File) => {
     if (!file) return;
+    const prevUrl = editBannerUrl;
+    const localUrl = URL.createObjectURL(file);
+    setEditBannerUrl(localUrl);
     setIsUploadingBanner(true);
     try {
       const url = await readImageFile(file);
       setEditBannerUrl(url);
+      try { URL.revokeObjectURL(localUrl); } catch {}
       const newAsset: MediaAsset = {
         id: `asset_${Date.now()}`,
         name: file.name,
@@ -916,6 +936,8 @@ export default function EventDashboardView({
       setMediaAssets((prev) => [newAsset, ...prev]);
       showToast(`Banner "${file.name}" uploaded successfully.`);
     } catch (cause) {
+      try { URL.revokeObjectURL(localUrl); } catch {}
+      setEditBannerUrl(prevUrl);
       showToast(cause instanceof Error ? cause.message : "Failed to upload image.");
     } finally {
       setIsUploadingBanner(false);
@@ -924,10 +946,14 @@ export default function EventDashboardView({
 
   const handleSquareBannerFileUpload = async (file: File) => {
     if (!file) return;
+    const prevUrl = editSquareBannerUrl;
+    const localUrl = URL.createObjectURL(file);
+    setEditSquareBannerUrl(localUrl);
     setIsUploadingSquareBanner(true);
     try {
       const url = await readImageFile(file);
       setEditSquareBannerUrl(url);
+      try { URL.revokeObjectURL(localUrl); } catch {}
       const newAsset: MediaAsset = {
         id: `asset_${Date.now()}`,
         name: file.name,
@@ -938,6 +964,8 @@ export default function EventDashboardView({
       setMediaAssets((prev) => [newAsset, ...prev]);
       showToast(`1:1 Square banner "${file.name}" uploaded successfully.`);
     } catch (cause) {
+      try { URL.revokeObjectURL(localUrl); } catch {}
+      setEditSquareBannerUrl(prevUrl);
       showToast(cause instanceof Error ? cause.message : "Failed to upload image.");
     } finally {
       setIsUploadingSquareBanner(false);
@@ -948,19 +976,54 @@ export default function EventDashboardView({
     if (!files || files.length === 0) return;
     setIsUploadingAsset(true);
     const fileArray = Array.from(files);
+
+    const pendingAssets = fileArray.map((f) => ({
+      id: `asset_pending_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      name: f.name,
+      localUrl: URL.createObjectURL(f),
+      size: `${(f.size / 1024).toFixed(1)} KB`,
+      file: f,
+    }));
+
+    setMediaAssets((prev) => [
+      ...pendingAssets.map((p) => ({
+        id: p.id,
+        name: p.name,
+        url: p.localUrl,
+        uploaded_at: new Date().toISOString(),
+        size: p.size,
+      })),
+      ...prev,
+    ]);
+
     try {
-      const newAssets = await Promise.all(
-        fileArray.map(async (file) => ({
-          id: `asset_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          name: file.name,
-          url: await readImageFile(file),
-          uploaded_at: new Date().toISOString(),
-          size: `${(file.size / 1024).toFixed(1)} KB`,
-        }))
+      const uploadedAssets = await Promise.all(
+        pendingAssets.map(async (p) => {
+          try {
+            const url = await readImageFile(p.file);
+            try { URL.revokeObjectURL(p.localUrl); } catch {}
+            return {
+              id: `asset_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              name: p.name,
+              url,
+              uploaded_at: new Date().toISOString(),
+              size: p.size,
+            };
+          } catch (err) {
+            try { URL.revokeObjectURL(p.localUrl); } catch {}
+            throw err;
+          }
+        })
       );
-      setMediaAssets((prev) => [...newAssets, ...prev]);
+      const pendingIds = new Set(pendingAssets.map((p) => p.id));
+      setMediaAssets((prev) => [
+        ...uploadedAssets,
+        ...prev.filter((a) => !pendingIds.has(a.id)),
+      ]);
       showToast(`${fileArray.length} asset${fileArray.length > 1 ? "s" : ""} added to event gallery.`);
     } catch (cause) {
+      const pendingIds = new Set(pendingAssets.map((p) => p.id));
+      setMediaAssets((prev) => prev.filter((a) => !pendingIds.has(a.id)));
       showToast(cause instanceof Error ? cause.message : "Failed to upload one or more images.");
     } finally {
       setIsUploadingAsset(false);
@@ -985,8 +1048,9 @@ export default function EventDashboardView({
     showToast(`"${asset.name}" set as 1:1 square banner.`);
   };
 
-  const handleSaveEventSetup = () => {
-    if (!event) return;
+  const handleSaveEventSetup = async () => {
+    if (!event || isSavingSetup) return;
+    setIsSavingSetup(true);
     const totalCap = tiers.reduce((sum, t) => sum + (Number(t.inventory) || 0), 0);
     const minSize = Math.max(1, Number(editTeamMinSize) || 2);
     const maxSize = Math.max(minSize, Number(editTeamMaxSize) || 4);
@@ -1038,10 +1102,16 @@ export default function EventDashboardView({
       total_capacity: totalCap,
       custom_questions: customQuestions,
     };
-    saveEvent(updated);
-    setEvent(updated);
-    setEditSlug(cleanSlug);
-    showToast("Event configuration saved successfully.");
+    try {
+      await saveEventAsync(updated);
+      setEvent(updated);
+      setEditSlug(cleanSlug);
+      showToast("Event configuration saved successfully.");
+    } catch (err: any) {
+      showToast(err.message || "Failed to save event configuration.");
+    } finally {
+      setIsSavingSetup(false);
+    }
   };
 
   const handleConfirmDeleteCurrentEvent = () => {
@@ -1380,11 +1450,11 @@ export default function EventDashboardView({
 
             <div className="flex items-center gap-2.5">
               <Link
-                href={`/events/${event?.slug || eventId}`}
+                href={`${WEB_APP_URL}/events/${event?.slug || eventId}`}
                 target="_blank"
                 className="btn-secondary group"
               >
-                <span>Preview Public Pass</span>
+                <span>View Live Page</span>
                 <ArrowRightIcon size={12} className="-rotate-45 text-zinc-400 group-hover:text-zinc-800 transition-transform" />
               </Link>
               <Link
@@ -1659,8 +1729,7 @@ export default function EventDashboardView({
                         <button
                           type="button"
                           onClick={() => {
-                            const origin = typeof window !== "undefined" ? window.location.origin : "https://hackways.com";
-                            const link = `${origin}/events/${editSlug || eventId}`;
+                            const link = `${WEB_APP_URL}/events/${editSlug || eventId}`;
                             navigator.clipboard.writeText(link);
                             showToast("Public event link copied to clipboard!");
                           }}
@@ -1670,7 +1739,7 @@ export default function EventDashboardView({
                           <span>Copy Link</span>
                         </button>
                         <Link
-                          href={`/events/${editSlug || eventId}`}
+                          href={`${WEB_APP_URL}/events/${editSlug || eventId}`}
                           target="_blank"
                           className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 hover:text-zinc-900 px-2 py-1 rounded hover:bg-zinc-200/60 transition"
                         >
@@ -2037,8 +2106,7 @@ export default function EventDashboardView({
                         <button
                           type="button"
                           onClick={() => {
-                            const origin = typeof window !== "undefined" ? window.location.origin : "https://hackways.com";
-                            const link = `${origin}/events/${editSlug || eventId}`;
+                            const link = `${WEB_APP_URL}/events/${editSlug || eventId}`;
                             navigator.clipboard.writeText(link);
                             showToast("Public event link copied to clipboard!");
                           }}
@@ -2048,7 +2116,7 @@ export default function EventDashboardView({
                           <span>Copy Link</span>
                         </button>
                         <Link
-                          href={`/events/${editSlug || eventId}`}
+                          href={`${WEB_APP_URL}/events/${editSlug || eventId}`}
                           target="_blank"
                           className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-600 hover:text-zinc-900 px-2 py-1 rounded hover:bg-zinc-200/60 transition"
                         >
@@ -2123,6 +2191,12 @@ export default function EventDashboardView({
                             alt="16:9 banner"
                             className="w-full h-full object-cover"
                           />
+                          {isUploadingBanner && (
+                            <div className="absolute inset-0 bg-black/60 z-10 flex flex-col items-center justify-center gap-2 text-white">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span className="text-xs font-semibold">Uploading (max 20MB)...</span>
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <label className="btn-secondary cursor-pointer py-1.5 px-3 text-xs bg-white text-zinc-900 font-semibold rounded-lg shadow-sm">
                               <span>Change</span>
@@ -2147,7 +2221,17 @@ export default function EventDashboardView({
                           </div>
                         </div>
                       ) : (
-                        <label className="aspect-16/9 w-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer">
+                        <label
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files?.[0]) {
+                              handleBannerFileUpload(e.dataTransfer.files[0]);
+                            }
+                          }}
+                          className="aspect-16/9 w-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer"
+                        >
                           <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-500 shadow-2xs">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
@@ -2183,6 +2267,12 @@ export default function EventDashboardView({
                             alt="1:1 poster"
                             className="w-full h-full object-cover"
                           />
+                          {isUploadingSquareBanner && (
+                            <div className="absolute inset-0 bg-black/60 z-10 flex flex-col items-center justify-center gap-2 text-white">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span className="text-xs font-semibold">Uploading (max 20MB)...</span>
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <label className="btn-secondary cursor-pointer py-1.5 px-3 text-xs bg-white text-zinc-900 font-semibold rounded-lg shadow-sm">
                               <span>Change</span>
@@ -2207,7 +2297,17 @@ export default function EventDashboardView({
                           </div>
                         </div>
                       ) : (
-                        <label className="aspect-square max-w-[260px] mx-auto w-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer">
+                        <label
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files?.[0]) {
+                              handleSquareBannerFileUpload(e.dataTransfer.files[0]);
+                            }
+                          }}
+                          className="aspect-square max-w-[260px] mx-auto w-full border-2 border-dashed border-zinc-200 hover:border-zinc-400 rounded-xl flex flex-col items-center justify-center gap-2 bg-zinc-50/50 hover:bg-zinc-50 transition cursor-pointer"
+                        >
                           <div className="w-8 h-8 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-500 shadow-2xs">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
@@ -2489,9 +2589,11 @@ export default function EventDashboardView({
               <button
                 type="button"
                 onClick={handleSaveEventSetup}
-                className="btn-primary"
+                disabled={isSavingSetup || isUploadingBanner || isUploadingSquareBanner || isUploadingAsset}
+                className="btn-primary flex items-center gap-2"
               >
-                <span>Save changes</span>
+                {isSavingSetup && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                <span>{isSavingSetup ? "Saving changes..." : "Save changes"}</span>
               </button>
             </div>
           </div>
@@ -3842,7 +3944,7 @@ export default function EventDashboardView({
                             <button
                               type="button"
                               onClick={() => {
-                                const url = `${window.location.origin}/events/${eventId}/rsvp?team=${team.code}`;
+                                const url = `${WEB_APP_URL}/events/${eventId}/rsvp?team=${team.code}`;
                                 navigator.clipboard.writeText(url);
                                 showToast(`Invite link for "${team.name}" copied to clipboard.`);
                               }}
@@ -4835,9 +4937,11 @@ export default function EventDashboardView({
               <button
                 type="submit"
                 form="ticket-tier-drawer-form"
-                className="h-9 px-4 rounded-lg text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition cursor-pointer"
+                disabled={isSavingTier}
+                className="h-9 px-4 rounded-lg text-xs font-semibold bg-zinc-950 text-white hover:bg-zinc-800 transition cursor-pointer flex items-center gap-1.5"
               >
-                {editingTier ? "Save" : "Add Ticket"}
+                {isSavingTier && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                <span>{isSavingTier ? "Saving..." : (editingTier ? "Save" : "Add Ticket")}</span>
               </button>
             </div>
           </div>
@@ -4921,10 +5025,10 @@ export default function EventDashboardView({
                 </label>
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   value={tierDrawerCap}
                   onChange={(e) => setTierDrawerCap(e.target.value)}
-                  placeholder="Unlimited"
+                  placeholder="— (Uncapped)"
                   className="w-full h-10 bg-white border border-zinc-300 focus:border-zinc-950 rounded-lg px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 transition tabular-nums"
                 />
               </div>
@@ -4936,10 +5040,10 @@ export default function EventDashboardView({
               </label>
               <input
                 type="number"
-                min="1"
+                min="0"
                 value={tierDrawerCap}
                 onChange={(e) => setTierDrawerCap(e.target.value)}
-                placeholder="Unlimited"
+                placeholder="— (Uncapped)"
                 className="w-full h-10 bg-white border border-zinc-300 focus:border-zinc-950 rounded-lg px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 transition tabular-nums"
               />
             </div>

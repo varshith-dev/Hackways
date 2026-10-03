@@ -325,6 +325,27 @@ export function saveEvent(event: EventItem): EventItem {
   }
 }
 
+export async function saveEventAsync(event: EventItem): Promise<EventItem> {
+  saveEvent(event);
+  try {
+    const res = await fetch(`/api/v1/events/${encodeURIComponent(event.id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(event),
+    });
+    if (!res.ok && res.status === 404) {
+      await fetch("/api/v1/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(event),
+      });
+    }
+  } catch (err) {
+    console.warn("Async event save sync error:", err);
+  }
+  return event;
+}
+
 export function deleteEvent(id: string, reason?: string): boolean {
   if (typeof window === "undefined") return false;
   try {

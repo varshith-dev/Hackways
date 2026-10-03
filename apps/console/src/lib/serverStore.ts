@@ -134,7 +134,7 @@ interface ServerState {
 // dir, so a bare process.cwd() path puts each app's writes in a different,
 // invisible-to-the-other file). Resolve to the repo root they're siblings
 // under instead, overridable for deployments where that layout doesn't hold.
-export const DATA_DIR = process.env.HACKWAYS_DATA_DIR || path.resolve(process.cwd(), "..", "..", ".server_data");
+export const DATA_DIR = process.env.HACKWAYS_DATA_DIR || process.env.DATA_DIR || path.resolve(process.cwd(), "..", "..", ".server_data");
 const STORE_FILE = path.join(DATA_DIR, "platform_store.json");
 
 function ensureDirExists() {
@@ -242,8 +242,18 @@ export const serverStore = {
       }
     }
 
+    if (typeof event.banner_url === "string" && event.banner_url.startsWith("blob:")) {
+      delete event.banner_url;
+    }
+    if (typeof event.square_banner_url === "string" && event.square_banner_url.startsWith("blob:")) {
+      delete event.square_banner_url;
+    }
+
     const state = getState();
-    const idx = state.events.findIndex((e) => e.id === event.id);
+    const normalizedSlug = event.slug?.trim().toLowerCase();
+    const idx = state.events.findIndex(
+      (e) => e.id === event.id || (normalizedSlug && e.slug && e.slug.toLowerCase() === normalizedSlug)
+    );
 
     // Normalize or auto-generate slug
     if (event.slug?.trim()) {
@@ -270,7 +280,8 @@ export const serverStore = {
     }
 
     if (idx >= 0) {
-      state.events[idx] = event;
+      state.events[idx] = { ...state.events[idx], ...event };
+      event = state.events[idx];
     } else {
       state.events.unshift(event);
     }

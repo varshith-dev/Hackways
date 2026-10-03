@@ -56,10 +56,18 @@ export async function PUT(
 
   try {
     const data = await req.json();
+    if (typeof data.banner_url === "string" && data.banner_url.startsWith("blob:")) {
+      delete data.banner_url;
+    }
+    if (typeof data.square_banner_url === "string" && data.square_banner_url.startsWith("blob:")) {
+      delete data.square_banner_url;
+    }
     const organizerId = existing?.organizer_id || sessionUser?.sub || data.organizer_id || "org_current";
     const hostUsers = existing?.host_users || data.host_users || [{ user_id: organizerId, name: sessionUser?.name || "Organizer", email: sessionUser?.email || "organizer@hackways.me", role: "Primary Host" }];
-    const updated = serverStore.saveEvent({ ...data, id, organizer_id: organizerId, host_users: hostUsers });
-    return NextResponse.json({ event: updated });
+    const targetId = existing?.id || data.id || id;
+    const targetSlug = data.slug || existing?.slug || id;
+    const updated = serverStore.saveEvent({ ...existing, ...data, id: targetId, slug: targetSlug, organizer_id: organizerId, host_users: hostUsers });
+    return NextResponse.json({ event: updated, tiers: updated.tiers || [] });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Failed to update event" }, { status: 500 });
   }
